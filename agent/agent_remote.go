@@ -27,7 +27,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/tutumagi/pitaya/cluster"
-	"github.com/tutumagi/pitaya/common"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/conn/packet"
@@ -79,10 +78,11 @@ func NewRemote(
 	s := session.New(a, false, sess.GetUid())
 	s.SetFrontendData(frontendID, sess.GetId())
 	if sess.EntityID != "" {
-		s.SetEntity(&common.Entity{
-			ID:    sess.EntityID,
-			Label: sess.EntityLabel,
-		})
+		// TODO 设置entity
+		// s.SetEntity(&common.Entity{
+		// 	ID:    sess.EntityID,
+		// 	Label: sess.EntityLabel,
+		// })
 	}
 
 	err := s.SetDataEncoded(sess.GetData())

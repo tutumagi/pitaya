@@ -150,7 +150,7 @@ func Cron() {
 		t := tInterface.(*Timer)
 		id := idInterface.(int64)
 		// prevent ChClosingTimer exceed
-		if t.counter == 0 {
+		if t.counter <= 0 {
 			if len(Manager.ChClosingTimer) < timerBacklog {
 				t.Stop()
 			}

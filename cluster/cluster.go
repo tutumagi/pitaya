@@ -128,7 +128,7 @@ func buildRequest(
 		}
 		if entity := session.Entity(); entity != nil {
 			req.Session.EntityID = session.Entity().ID
-			req.Session.EntityLabel = session.Entity().Label
+			req.Session.EntityLabel = session.Entity().TypName()
 		}
 	}
 
