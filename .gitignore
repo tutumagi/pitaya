@@ -28,4 +28,4 @@ examples/testing/server
 examples/demo/cluster_grpc/main
 
 
-aoi/cgo/build
+aoi/cgo/build/
