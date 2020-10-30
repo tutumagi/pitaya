@@ -254,8 +254,11 @@ func (s *Session) Entity() *entity.Entity {
 	return s.ent
 }
 
-// SetEntity set entity
-func (s *Session) SetEntity(ent *entity.Entity) {
+// BindEntity set entity
+func (s *Session) BindEntity(ent *entity.Entity) {
+	if s.uid == "" {
+		logger.Log.Errorf("session uid is empty, cannot bind entity, entity id %s", ent.ID)
+	}
 	s.ent = ent
 }
 
