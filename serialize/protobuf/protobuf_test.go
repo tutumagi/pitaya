@@ -24,6 +24,7 @@ import (
 	"flag"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/tutumagi/pitaya/constants"
@@ -81,7 +82,15 @@ func TestUnmarshal(t *testing.T) {
 		dest     interface{}
 		err      error
 	}{
-		"test_ok":           {&protos.Response{Data: []byte("data"), Error: &protos.Error{Msg: "error"}}, data, &dest, nil},
+		"test_ok": {
+			&protos.Response{
+				Data:  []byte("data"),
+				Error: &protos.Error{Msg: "error"},
+			},
+			data,
+			&dest,
+			nil,
+		},
 		"test_invalid_dest": {&protos.Response{Data: []byte(nil)}, data, "invalid", constants.ErrWrongValueType},
 	}
 	serializer := NewSerializer()
@@ -92,7 +101,20 @@ func TestUnmarshal(t *testing.T) {
 			err := serializer.Unmarshal(table.data, result)
 			assert.Equal(t, table.err, err)
 			if table.err == nil {
-				assert.Equal(t, table.expected, result)
+				// assert.Equal(t, table.expected, result)
+				assert.New(t).Condition(func() (success bool) {
+					expectedProto, ok := table.expected.(proto.Message)
+					if !ok {
+						return false
+					}
+
+					actualProto, ok := result.(proto.Message)
+					if !ok {
+						return false
+					}
+
+					return proto.Equal(expectedProto, actualProto)
+				})
 			}
 		})
 	}
