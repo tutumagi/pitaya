@@ -293,7 +293,7 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		// logger.Log.Infof("pitaya.handler end to processPacket :handshake ACK for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
 
 	case packet.Data:
-		if a.GetStatus() < constants.StatusWorking {
+		if a.GetStatus() != constants.StatusWorking {
 			return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
 				a.RemoteAddr().String())
 		}
