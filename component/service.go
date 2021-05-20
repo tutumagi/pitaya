@@ -44,7 +44,6 @@ type (
 		Method   reflect.Method // method stub
 		HasArgs  bool           // if remote has no args we won't try to serialize received data into arguments
 		Type     reflect.Type   // low-level type of method
-		Process  func(reflect.Method,[]reflect.Value) (rets interface{}, err error)
 	}
 
 	// Service implements a specific service, some of it's methods will be
