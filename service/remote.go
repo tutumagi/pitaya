@@ -302,10 +302,17 @@ func (r *RemoteService) Register(comp component.Component, opts []component.Opti
 	if err := s.ExtractRemote(); err != nil {
 		return err
 	}
-
+	s.ProcessChan = make(chan struct{}, 1)
+	processFunc := func(method reflect.Method, value []reflect.Value) (rets interface{}, err error) {
+		s.ProcessChan <- struct{}{}
+		rets, err = util.Pcall(method, value)
+		<-s.ProcessChan
+		return
+	}
 	r.services[s.Name] = s
 	// register all remotes
 	for name, remote := range s.Remotes {
+		remote.Process = processFunc
 		remotes[fmt.Sprintf("%s.%s", s.Name, name)] = remote
 	}
 
@@ -377,7 +384,7 @@ func (r *RemoteService) handleRPCUser(ctx context.Context, req *protos.Request, 
 		params = append(params, reflect.ValueOf(arg))
 	}
 
-	ret, err := util.Pcall(remote.Method, params)
+	ret, err := remote.Process(remote.Method, params)
 	if err != nil {
 		response := &protos.Response{
 			Error: &protos.Error{

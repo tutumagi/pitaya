@@ -44,17 +44,19 @@ type (
 		Method   reflect.Method // method stub
 		HasArgs  bool           // if remote has no args we won't try to serialize received data into arguments
 		Type     reflect.Type   // low-level type of method
+		Process  func(reflect.Method,[]reflect.Value) (rets interface{}, err error)
 	}
 
 	// Service implements a specific service, some of it's methods will be
 	// called when the correspond events is occurred.
 	Service struct {
-		Name     string              // name of service
-		Type     reflect.Type        // type of the receiver
-		Receiver reflect.Value       // receiver of methods for the service
-		Handlers map[string]*Handler // registered methods
-		Remotes  map[string]*Remote  // registered remote methods
-		Options  options             // options
+		Name        string              // name of service
+		Type        reflect.Type        // type of the receiver
+		Receiver    reflect.Value       // receiver of methods for the service
+		Handlers    map[string]*Handler // registered methods
+		Remotes     map[string]*Remote  // registered remote methods
+		Options     options             // options
+		ProcessChan chan struct{}
 	}
 )
 
