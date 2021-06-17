@@ -84,36 +84,14 @@ type App struct {
 	startAt          time.Time
 	worker           *worker.Worker
 
-	rootActor *actor.PID
+	BootEntityType string
 }
 
 // Started -> ...
 // Stop(system) -> stoppingMessage(user) ->  stateStopped(user)
 // 										 ->  restarting(user)
-func (a *App) Receive(ctx actor.Context) {
-	switch msg := ctx.Message().(type) {
-	case *actor.Started:
-		logger.Log.Info("App Starting, initialize actor here")
-	case *actor.Stopping:
-		logger.Log.Info("App Stopping, actor is about to shut down")
-	case *actor.Stopped:
-		logger.Log.Info("App Stopped, actor and its children are stopped")
-	case *actor.Restarting:
-		logger.Log.Info("App Restarting, actor is about to restart")
-	case *actor.ReceiveTimeout:
-		logger.Log.Info("App ReceiveTimeout: %v", ctx.Self().String())
-	case startServeMessage:
-		logger.Log.Info("App server start")
-		periodicMetrics()
 
-		// 开始连接层的事件循环
-		listen(ctx)
-	default:
-		logger.Log.Errorf("unknown message %v", msg)
-	}
-}
-
-func (a *App) HandleNewConn(ctx actor.Context, conn acceptor.PlayerConn) {
+func (a *App) HandleNewConn(conn acceptor.PlayerConn) {
 	// create a client agent and startup write goroutine
 	// agent := agent.NewAgent(conn,
 	// 	app.packetDecoder,
@@ -367,14 +345,10 @@ func Start() {
 
 	initSysRemotes()
 
-	rootProps := actor.PropsFromProducer(func() actor.Actor {
-		return app
-	})
+	periodicMetrics()
 
-	rootCtx := sys.Root
-	app.rootActor, _ = rootCtx.SpawnNamed(rootProps, "__root__")
-
-	rootCtx.Send(app.rootActor, startServeMessage{})
+	// 开始连接层的事件循环
+	listen()
 
 	defer func() {
 		timer.GlobalTicker.Stop()
@@ -400,7 +374,7 @@ func Start() {
 	// shutdownComponents()
 }
 
-func listen(ctx actor.Context) {
+func listen() {
 	// startupComponents()
 	// create global ticker instance, timer precision could be customized
 	// by SetTimerPrecision
@@ -415,7 +389,7 @@ func listen(ctx actor.Context) {
 		// 处理新连接的消息
 		go func() {
 			for conn := range a.GetConnChan() {
-				go app.HandleNewConn(ctx, conn)
+				go app.HandleNewConn(conn)
 			}
 		}()
 

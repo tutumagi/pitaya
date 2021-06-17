@@ -32,7 +32,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
@@ -111,7 +110,6 @@ type (
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
 
-		pid *actor.PID
 		// 和哪个 EntityID 绑定在一起
 		ownerEntityID string
 	}
