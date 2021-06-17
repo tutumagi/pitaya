@@ -312,7 +312,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&message.Message{Type: message.Request, ID: id, Data: data},
 			protos.Request{
 				Type: protos.RPCType_Sys,
-				Msg: &protos.Msg{
+				Msg: &protos.MsgV2{
 					Route: rt.String(),
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
@@ -320,9 +320,8 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 				},
 				FrontendID: sv.ID,
 				Session: &protos.Session{
-					Id:   ss.ID(),
-					Uid:  ss.UID(),
-					Data: ss.GetDataEncoded(),
+					Id:  ss.ID(),
+					Uid: ss.UID(),
 				},
 			},
 		},
@@ -331,7 +330,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&message.Message{Type: message.Request, ID: id, Data: data},
 			protos.Request{
 				Type: protos.RPCType_Sys,
-				Msg: &protos.Msg{
+				Msg: &protos.MsgV2{
 					Route: rt.String(),
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
@@ -339,9 +338,8 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 				},
 				FrontendID: "",
 				Session: &protos.Session{
-					Id:   ss.ID(),
-					Uid:  ss.UID(),
-					Data: ss.GetDataEncoded(),
+					Id:  ss.ID(),
+					Uid: ss.UID(),
 				},
 			},
 		},
@@ -350,7 +348,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&message.Message{Type: message.Request, ID: id, Data: data},
 			protos.Request{
 				Type: protos.RPCType_User,
-				Msg: &protos.Msg{
+				Msg: &protos.MsgV2{
 					Route: rt.String(),
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
@@ -363,7 +361,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&message.Message{Type: message.Notify, ID: id, Data: data},
 			protos.Request{
 				Type: protos.RPCType_Sys,
-				Msg: &protos.Msg{
+				Msg: &protos.MsgV2{
 					Route: rt.String(),
 					Data:  data,
 					Type:  protos.MsgType_MsgNotify,
@@ -371,9 +369,8 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 				},
 				FrontendID: "",
 				Session: &protos.Session{
-					Id:   ss.ID(),
-					Uid:  ss.UID(),
-					Data: ss.GetDataEncoded(),
+					Id:  ss.ID(),
+					Uid: ss.UID(),
 				},
 			},
 		},

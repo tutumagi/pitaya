@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/helpers"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var etcdSDTables = []struct {

@@ -271,8 +271,8 @@ func TestNatsRPCServerHandleMessages(t *testing.T) {
 		topic string
 		req   *protos.Request
 	}{
-		{"user1/messages", &protos.Request{Type: protos.RPCType_Sys, FrontendID: "bla", Msg: &protos.Msg{Id: 1, Reply: "ae"}}},
-		{"user2/messages", &protos.Request{Type: protos.RPCType_User, FrontendID: "bla2", Msg: &protos.Msg{Id: 1}}},
+		{"user1/messages", &protos.Request{Type: protos.RPCType_Sys, FrontendID: "bla", Msg: &protos.MsgV2{Id: 1, Reply: "ae"}}},
+		{"user2/messages", &protos.Request{Type: protos.RPCType_User, FrontendID: "bla2", Msg: &protos.MsgV2{Id: 1}}},
 	}
 
 	go rpcServer.handleMessages()
@@ -328,8 +328,8 @@ func TestNatsRPCServerInit(t *testing.T) {
 		topic string
 		req   *protos.Request
 	}{
-		{"test1", getChannel(sv.Type, sv.ID), &protos.Request{Type: protos.RPCType_Sys, FrontendID: "bla", Msg: &protos.Msg{Id: 1, Reply: "ae"}}},
-		{"test2", getChannel(sv.Type, sv.ID), &protos.Request{Type: protos.RPCType_User, FrontendID: "bla2", Msg: &protos.Msg{Id: 1, Reply: "boa"}}},
+		{"test1", getChannel(sv.Type, sv.ID), &protos.Request{Type: protos.RPCType_Sys, FrontendID: "bla", Msg: &protos.MsgV2{Id: 1, Reply: "ae"}}},
+		{"test2", getChannel(sv.Type, sv.ID), &protos.Request{Type: protos.RPCType_User, FrontendID: "bla2", Msg: &protos.MsgV2{Id: 1, Reply: "boa"}}},
 	}
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {

@@ -79,10 +79,6 @@ func NewRemote(
 	s.SetRoleID(sess.GetRoleID())
 	s.SetFrontendData(frontendID, sess.GetId())
 
-	err := s.SetDataEncoded(sess.GetData())
-	if err != nil {
-		return nil, err
-	}
 	a.Session = s
 
 	return a, nil
@@ -99,7 +95,7 @@ func (a *Remote) Kick(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = a.SendRequest(ctx, a.frontendID, constants.KickRoute, b)
+	_, err = a.SendRequest(ctx, "", "", a.frontendID, constants.KickRoute, b)
 	return err
 }
 
@@ -215,7 +211,7 @@ func (a *Remote) sendPush(m pendingMessage, userID string, sv *cluster.Server) (
 }
 
 // SendRequest sends a request to a server
-func (a *Remote) SendRequest(ctx context.Context, serverID, reqRoute string, v interface{}) (*protos.Response, error) {
+func (a *Remote) SendRequest(ctx context.Context, entityID, entityType, serverID, reqRoute string, v interface{}) (*protos.Response, error) {
 	r, err := route.Decode(reqRoute)
 	if err != nil {
 		return nil, err
@@ -225,8 +221,10 @@ func (a *Remote) SendRequest(ctx context.Context, serverID, reqRoute string, v i
 		return nil, err
 	}
 	msg := &message.Message{
-		Route: reqRoute,
-		Data:  payload,
+		Route:      reqRoute,
+		Data:       payload,
+		EntityID:   entityID,
+		EntityType: entityType,
 	}
 	server, err := a.serviceDiscovery.GetServer(serverID)
 	if err != nil {

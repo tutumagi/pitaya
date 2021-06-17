@@ -92,44 +92,44 @@ func TestBindSessionShouldErrorIfAlreadyBound(t *testing.T) {
 	assert.EqualError(t, constants.ErrSessionAlreadyBound, err.Error())
 }
 
-func TestPushSession(t *testing.T) {
-	t.Parallel()
-	s := &Sys{}
-	ss := session.New(nil, true)
-	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello":   "test",
-		"hello22": 2,
-	})
-	assert.NoError(t, err)
-	data := &protos.Session{
-		Id:   ss.ID(),
-		Uid:  uid,
-		Data: d,
-	}
-	res, err := s.PushSession(nil, data)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("ack"), res.Data)
-	assert.Equal(t, data.Data, ss.GetDataEncoded())
-}
+// func TestPushSession(t *testing.T) {
+// 	t.Parallel()
+// 	s := &Sys{}
+// 	ss := session.New(nil, true)
+// 	uid := uuid.New().String()
+// 	d, err := json.Marshal(map[string]interface{}{
+// 		"hello":   "test",
+// 		"hello22": 2,
+// 	})
+// 	assert.NoError(t, err)
+// 	data := &protos.Session{
+// 		Id:   ss.ID(),
+// 		Uid:  uid,
+// 		Data: d,
+// 	}
+// 	res, err := s.PushSession(nil, data)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, []byte("ack"), res.Data)
+// 	assert.Equal(t, data.Data, ss.GetDataEncoded())
+// }
 
-func TestPushSessionShouldFailIfSessionDoesntExists(t *testing.T) {
-	t.Parallel()
-	s := &Sys{}
-	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello":   "test",
-		"hello22": 2,
-	})
-	assert.NoError(t, err)
-	data := &protos.Session{
-		Id:   343,
-		Uid:  uid,
-		Data: d,
-	}
-	_, err = s.PushSession(nil, data)
-	assert.EqualError(t, constants.ErrSessionNotFound, err.Error())
-}
+// func TestPushSessionShouldFailIfSessionDoesntExists(t *testing.T) {
+// 	t.Parallel()
+// 	s := &Sys{}
+// 	uid := uuid.New().String()
+// 	d, err := json.Marshal(map[string]interface{}{
+// 		"hello":   "test",
+// 		"hello22": 2,
+// 	})
+// 	assert.NoError(t, err)
+// 	data := &protos.Session{
+// 		Id:   343,
+// 		Uid:  uid,
+// 		Data: d,
+// 	}
+// 	_, err = s.PushSession(nil, data)
+// 	assert.EqualError(t, constants.ErrSessionNotFound, err.Error())
+// }
 
 func TestKick(t *testing.T) {
 	t.Parallel()

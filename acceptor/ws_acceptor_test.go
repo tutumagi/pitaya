@@ -21,11 +21,11 @@ var wsAcceptorTables = []struct {
 	panicErr error
 }{
 	// TODO change to allocatable ports
-	{"test_1", "0.0.0.0:0", []byte{0x01, 0x02}, []string{"./fixtures/server.crt", "./fixtures/server.key"}, nil},
+	{"test_1", "localhost:0", []byte{0x01, 0x02}, []string{"./fixtures/server.crt", "./fixtures/server.key"}, nil},
 	{"test_2", "127.0.0.1:0", []byte{0x00}, []string{"./fixtures/server.crt", "./fixtures/server.key"}, nil},
-	{"test_3", "0.0.0.0:0", []byte{0x00}, []string{"wqodij"}, constants.ErrInvalidCertificates},
-	{"test_4", "0.0.0.0:0", []byte{0x00}, []string{"wqodij", "qwdo", "wod"}, constants.ErrInvalidCertificates},
-	{"test_4", "0.0.0.0:0", []byte{0x00}, []string{}, nil},
+	{"test_3", "127.0.0.1:0", []byte{0x00}, []string{"wqodij"}, constants.ErrInvalidCertificates},
+	{"test_4", "127.0.0.1:0", []byte{0x00}, []string{"wqodij", "qwdo", "wod"}, constants.ErrInvalidCertificates},
+	{"test_4", "127.0.0.1:0", []byte{0x00}, []string{}, nil},
 }
 
 func TestNewWSAcceptor(t *testing.T) {
@@ -82,6 +82,9 @@ func mustConnectToWS(t *testing.T, write []byte, w *WSAcceptor, protocol string)
 		addr := fmt.Sprintf("%s://%s", protocol, w.GetAddr())
 		dialer := websocket.DefaultDialer
 		conn, _, err := dialer.Dial(addr, nil)
+		if err != nil {
+			return err
+		}
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		conn.WriteMessage(websocket.BinaryMessage, write)
 		defer conn.Close()
@@ -91,10 +94,11 @@ func mustConnectToWS(t *testing.T, write []byte, w *WSAcceptor, protocol string)
 
 func TestWSAcceptorListenAndServe(t *testing.T) {
 	for _, table := range wsAcceptorTables {
+		// table := wsAcceptorTables[0]
 		t.Run(table.name, func(t *testing.T) {
 			w := NewWSAcceptor(table.addr)
 			c := w.GetConnChan()
-			defer w.Stop()
+			// defer w.Stop()
 			go w.ListenAndServe()
 			mustConnectToWS(t, table.write, w, "ws")
 			conn := helpers.ShouldEventuallyReceive(t, c, 100*time.Millisecond).(*WSConn)
@@ -109,7 +113,7 @@ func TestWSAcceptorListenAndServeTLS(t *testing.T) {
 		t.Run(table.name, func(t *testing.T) {
 			w := NewWSAcceptor(table.addr)
 			c := w.GetConnChan()
-			defer w.Stop()
+			// defer w.Stop()
 			go w.ListenAndServeTLS("./fixtures/server.crt", "./fixtures/server.key")
 			mustConnectToWS(t, table.write, w, "wss")
 			conn := helpers.ShouldEventuallyReceive(t, c, 100*time.Millisecond).(*WSConn)
@@ -234,7 +238,7 @@ func TestWSGetNextMessage(t *testing.T) {
 
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {
-			w := NewWSAcceptor("0.0.0.0:0")
+			w := NewWSAcceptor("127.0.0.1:0")
 			c := w.GetConnChan()
 			defer w.Stop()
 			go w.ListenAndServe()
@@ -264,7 +268,7 @@ func TestWSGetNextMessage(t *testing.T) {
 }
 
 func TestWSGetNextMessageSequentially(t *testing.T) {
-	w := NewWSAcceptor("0.0.0.0:0")
+	w := NewWSAcceptor("127.0.0.1:0")
 	c := w.GetConnChan()
 	defer w.Stop()
 	go w.ListenAndServe()

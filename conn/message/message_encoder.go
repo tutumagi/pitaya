@@ -127,7 +127,7 @@ func (me *MessagesEncoder) Decode(data []byte) (*Message, error) {
 }
 
 // Decode unmarshal the bytes slice to a message
-// See ref: https://github.com/tutumagi/pitaya/blob/master/docs/communication_protocol.md
+// See ref: https://github.com/tutumagi/pitaya/blob/master/docs/communication.md
 func Decode(data []byte) (*Message, error) {
 	if len(data) < msgHeadLength {
 		return nil, ErrInvalidMessage

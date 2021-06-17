@@ -45,6 +45,9 @@ type tcpPlayerConn struct {
 	net.Conn
 }
 
+var _ Acceptor = &TCPAcceptor{}
+var _ PlayerConn = &tcpPlayerConn{}
+
 // GetNextMessage reads the next message available in the stream
 func (t *tcpPlayerConn) GetNextMessage() (b []byte, err error) {
 	header, err := ioutil.ReadAll(io.LimitReader(t.Conn, codec.HeadLength))

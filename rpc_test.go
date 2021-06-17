@@ -23,6 +23,7 @@ package pitaya
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
@@ -37,11 +38,10 @@ import (
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	serializemocks "github.com/tutumagi/pitaya/serialize/mocks"
-	"github.com/tutumagi/pitaya/service"
 )
 
 func TestDoSendRPCNotInitialized(t *testing.T) {
-	err := doSendRPC(nil, "", "", nil, nil)
+	err := doSendRPC(nil, "", "", "", "", nil, nil)
 	assert.Equal(t, constants.ErrRPCServerNotInitialized, err)
 }
 
@@ -66,6 +66,7 @@ func TestDoSendRPC(t *testing.T) {
 			ctx := context.Background()
 			if table.err == nil {
 				packetEncoder := codec.NewPomeloPacketEncoder()
+				packetDecoder := codec.NewPomeloPacketDecoder()
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockSerializer := serializemocks.NewMockSerializer(ctrl)
@@ -74,16 +75,30 @@ func TestDoSendRPC(t *testing.T) {
 				mockRPCServer := clustermocks.NewMockRPCServer(ctrl)
 				messageEncoder := message.NewMessagesEncoder(false)
 				router := router.New()
-				svc := service.NewRemoteService(mockRPCClient, mockRPCServer, mockSD, packetEncoder, mockSerializer, router, messageEncoder, &cluster.Server{})
+				svc := NewAppProcessor(
+					nil,
+					packetDecoder,
+					packetEncoder,
+					mockSerializer,
+					1*time.Second,
+					100,
+					100,
+					100,
+					nil,
+					messageEncoder,
+					nil,
+					mockRPCClient,
+					mockRPCServer, nil, router, nil)
+				//   agent.NewRemoteService(mockRPCClient, mockRPCServer, mockSD, packetEncoder, mockSerializer, router, messageEncoder, &cluster.Server{})
 				assert.NotNil(t, svc)
-				remoteService = svc
+				// remoteService = svc
 				app.server.ID = "notmyserver"
 				b, err := proto.Marshal(&test.SomeStruct{A: 1})
 				assert.NoError(t, err)
 				mockSD.EXPECT().GetServer("myserver").Return(&cluster.Server{}, nil)
 				mockRPCClient.EXPECT().Call(ctx, protos.RPCType_User, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&protos.Response{Data: b}, nil)
 			}
-			err := RPCTo(ctx, "myserver", table.routeStr, table.reply, table.arg)
+			err := RPCTo(ctx, "", "", "myserver", table.routeStr, table.reply, table.arg)
 			assert.Equal(t, table.err, err)
 		})
 	}

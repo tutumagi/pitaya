@@ -1,74 +1,52 @@
 module github.com/tutumagi/pitaya
 
-go 1.12
+go 1.14
+
+// replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
 require (
-	github.com/DataDog/datadog-go v2.2.0+incompatible
+	github.com/AsynkronIT/protoactor-go v0.0.0-20210520041424-43065ace108f
+	github.com/DataDog/datadog-go v3.2.0+incompatible
 	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
-	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
-	github.com/bitly/go-simplejson v0.5.0 // indirect
-	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
-	github.com/coreos/etcd v3.3.9+incompatible
-	github.com/coreos/go-semver v0.2.0 // indirect
-	github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea // indirect
-	github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf // indirect
-	github.com/customerio/gospec v0.0.0-20130710230057-a5cc0e48aa39 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/fsnotify/fsnotify v1.4.7 // indirect
-	github.com/garyburd/redigo v1.6.0 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-playground/locales v0.12.1 // indirect
-	github.com/go-playground/universal-translator v0.16.0 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/groupcache v0.0.0-20180203143532-66deaeb636df // indirect
-	github.com/golang/mock v1.4.4
-	github.com/golang/protobuf v1.4.2
-	github.com/google/btree v0.0.0-20180124185431-e89373fe6b4a // indirect
-	github.com/google/uuid v1.0.0
-	github.com/gorilla/websocket v1.2.0
-	github.com/grpc-ecosystem/go-grpc-prometheus v0.0.0-20160910222444-6b7015e65d36 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.3.0 // indirect
-	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
+	github.com/Shopify/sarama v1.28.0
+	github.com/astaxie/beego v1.12.3
+	github.com/bsm/sarama-cluster v2.1.15+incompatible
+	github.com/garyburd/redigo v1.6.2 // indirect
+	github.com/go-playground/assert/v2 v2.0.1
+	github.com/go-playground/universal-translator v0.17.0 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/golang/mock v1.5.0
+	github.com/golang/protobuf v1.5.2
+	github.com/google/uuid v1.1.2
+	github.com/gorilla/websocket v1.4.2
 	github.com/jhump/protoreflect v1.5.0
-	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/magiconair/properties v1.8.0 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699 // indirect
-	github.com/nats-io/gnatsd v1.4.1
-	github.com/nats-io/go-nats v1.5.0 // indirect
-	github.com/nats-io/nats-server v1.4.1
-	github.com/nats-io/nats-server/v2 v2.0.4 // indirect
-	github.com/nats-io/nats.go v1.8.1
+	github.com/klauspost/compress v1.11.12 // indirect
+	github.com/nats-io/jwt v1.2.2 // indirect
+	github.com/nats-io/nats-server/v2 v2.1.9
+	github.com/nats-io/nats.go v1.11.0
+	github.com/nats-io/stan.go v0.8.2
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/orfjackal/nanospec.go v0.0.0-20120727230329-de4694c1d701 // indirect
-	github.com/pelletier/go-toml v1.4.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v0.8.0
-	github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e // indirect
-	github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273 // indirect
-	github.com/sirupsen/logrus v1.4.2
-	github.com/soheilhy/cmux v0.1.4 // indirect
-	github.com/spf13/afero v1.1.1 // indirect
-	github.com/spf13/cast v1.2.0 // indirect
-	github.com/spf13/jwalterweatherman v0.0.0-20180109140146-7c0cea34c8ec // indirect
-	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/spf13/viper v1.0.2
+	github.com/prometheus/client_golang v1.7.0
+	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/satori/go.uuid v1.2.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	github.com/topfreegames/go-workers v1.0.0
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	github.com/ugorji/go v0.0.0-20180112141927-9831f2c3ac10 // indirect
-	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
-	go.uber.org/atomic v1.3.2 // indirect
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/text v0.3.3 // indirect
-	golang.org/x/time v0.0.0-20180314180208-26559e0f760e // indirect
-	google.golang.org/grpc v1.27.0
-	google.golang.org/protobuf v1.25.0
-	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	gitlab.gamesword.com/nut/dreamcity v0.0.2
+	gitlab.gamesword.com/nut/entitygen v0.0.0-20210318084826-f7b3d1b17db6
+	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
+	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
+	go.etcd.io/etcd/tests/v3 v3.5.0-alpha.0
+	go.mongodb.org/mongo-driver v1.4.6
+	go.uber.org/zap v1.16.0
+	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
+	google.golang.org/genproto v0.0.0-20210524171403-669157292da3 // indirect
+	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/go-playground/validator.v9 v9.21.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

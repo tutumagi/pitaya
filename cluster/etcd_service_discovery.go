@@ -28,12 +28,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/util"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/namespace"
 )
 
 type etcdServiceDiscovery struct {

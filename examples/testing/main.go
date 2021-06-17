@@ -35,6 +35,8 @@ import (
 	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/constants"
+	"github.com/tutumagi/pitaya/engine/bc"
+	"github.com/tutumagi/pitaya/engine/bc/basepart"
 	"github.com/tutumagi/pitaya/examples/testing/protos"
 	"github.com/tutumagi/pitaya/groups"
 	"github.com/tutumagi/pitaya/protos/test"
@@ -42,6 +44,14 @@ import (
 	"github.com/tutumagi/pitaya/serialize/protobuf"
 	"github.com/tutumagi/pitaya/session"
 )
+
+type TestService struct {
+	basepart.Entity
+}
+
+type TestRemoteService struct {
+	basepart.Entity
+}
 
 // TestSvc service for e2e tests
 type TestSvc struct {
@@ -264,13 +274,15 @@ func main() {
 
 	tcp := acceptor.NewTCPAcceptor(fmt.Sprintf(":%d", *port))
 
-	pitaya.Register(
+	desc := bc.RegisterService("testservice", &TestService{})
+	desc.Routers.Register(
 		&TestSvc{},
 		component.WithName("testsvc"),
 		component.WithNameFunc(strings.ToLower),
 	)
 
-	pitaya.RegisterRemote(
+	desc2 := bc.RegisterService("testremtoeservice", &TestService{})
+	desc2.Routers.RegisterRemote(
 		&TestRemoteSvc{},
 		component.WithName("testremotesvc"),
 		component.WithNameFunc(strings.ToLower),

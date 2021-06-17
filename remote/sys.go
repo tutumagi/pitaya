@@ -29,6 +29,10 @@ import (
 	"github.com/tutumagi/pitaya/session"
 )
 
+// type SysService struct {
+// 	basepart.Entity
+// }
+
 // Sys contains logic for handling sys remotes
 type Sys struct {
 	component.Base
@@ -46,17 +50,17 @@ func (s *Sys) BindSession(ctx context.Context, sessionData *protos.Session) (*pr
 	return &protos.Response{Data: []byte("ack")}, nil
 }
 
-// PushSession updates the local session
-func (s *Sys) PushSession(ctx context.Context, sessionData *protos.Session) (*protos.Response, error) {
-	sess := session.GetSessionByID(sessionData.Id)
-	if sess == nil {
-		return nil, constants.ErrSessionNotFound
-	}
-	if err := sess.SetDataEncoded(sessionData.Data); err != nil {
-		return nil, err
-	}
-	return &protos.Response{Data: []byte("ack")}, nil
-}
+// // PushSession updates the local session
+// func (s *Sys) PushSession(ctx context.Context, sessionData *protos.Session) (*protos.Response, error) {
+// 	sess := session.GetSessionByID(sessionData.Id)
+// 	if sess == nil {
+// 		return nil, constants.ErrSessionNotFound
+// 	}
+// 	if err := sess.SetDataEncoded(sessionData.Data); err != nil {
+// 		return nil, err
+// 	}
+// 	return &protos.Response{Data: []byte("ack")}, nil
+// }
 
 // Kick kicks a local user
 func (s *Sys) Kick(ctx context.Context, msg *protos.KickMsg) (*protos.KickAnswer, error) {

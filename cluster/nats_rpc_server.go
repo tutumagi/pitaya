@@ -183,6 +183,7 @@ func (ns *NatsRPCServer) subscribeToUserMessages(uid string, svType string) (*na
 	return sub, nil
 }
 
+// 处理 rpc 过来的消息
 func (ns *NatsRPCServer) handleMessages() {
 	defer (func() {
 		ns.conn.Close()
@@ -256,10 +257,9 @@ func (ns *NatsRPCServer) marshalResponse(res *protos.Response) ([]byte, error) {
 }
 
 func (ns *NatsRPCServer) processMessages(threadID int) {
-	// 注释by 涂飞
-	// for req := range ns.GetUnhandledRequestsChannel() {
-	// 	ns.ProcessSingleMessage(req)
-	// }
+	for req := range ns.GetUnhandledRequestsChannel() {
+		ns.ProcessSingleMessage(req)
+	}
 }
 
 // ProcessSingleMessage 处理单个 rpc 到的消息
@@ -349,10 +349,9 @@ func (ns *NatsRPCServer) Init() error {
 	}
 	// this handles remote messages
 	// 处理 RPC 消息
-	// 注释 by 涂飞
-	// for i := 0; i < ns.config.GetInt("pitaya.concurrency.remote.service"); i++ {
-	// 	go ns.processMessages(i)
-	// }
+	for i := 0; i < ns.config.GetInt("pitaya.concurrency.remote.service"); i++ {
+		go ns.processMessages(i)
+	}
 
 	session.OnSessionBind(ns.onSessionBind)
 

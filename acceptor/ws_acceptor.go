@@ -148,17 +148,21 @@ func (w *WSAcceptor) ListenAndServeTLS(cert, key string) {
 func (w *WSAcceptor) serve(upgrader *websocket.Upgrader) {
 	defer w.Stop()
 
-	http.Serve(w.listener, &connHandler{
+	err := http.Serve(w.listener, &connHandler{
 		upgrader: upgrader,
 		connChan: w.connChan,
 	})
+	if err != nil {
+		logger.Log.Warnf("serve websocket return err:%s", err)
+	}
 }
 
 // Stop stops the acceptor
 func (w *WSAcceptor) Stop() {
+	logger.Log.Debugf("websocket stop: %s", w.listener.Addr())
 	err := w.listener.Close()
 	if err != nil {
-		logger.Log.Errorf("Failed to stop: %s", err.Error())
+		// logger.Log.Errorf("Failed to stop: %s", err.Error())
 	}
 }
 

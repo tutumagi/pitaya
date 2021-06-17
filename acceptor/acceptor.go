@@ -30,8 +30,10 @@ type PlayerConn interface {
 
 // Acceptor type interface
 type Acceptor interface {
+	// 开始连接的端口监听
 	ListenAndServe()
 	Stop()
 	GetAddr() string
+	// 获得新连接的channel
 	GetConnChan() chan PlayerConn
 }

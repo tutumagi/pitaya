@@ -6,12 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/namespace"
-	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/namespace"
+
+	// "go.etcd.io/etcd/server/v3/mvcc"
+	mvccpb "go.etcd.io/etcd/api/v3/mvccpb"
 )
 
 var (

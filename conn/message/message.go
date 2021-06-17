@@ -73,6 +73,9 @@ type Message struct {
 	Data       []byte // payload
 	compressed bool   // is message compressed
 	Err        bool   // is an error message
+
+	EntityID   string
+	EntityType string
 }
 
 // New returns a new message instance
@@ -86,14 +89,16 @@ func New(err ...bool) *Message {
 
 // String, implementation of fmt.Stringer interface
 func (m *Message) String() string {
-	return fmt.Sprintf("Type: %s, ID: %d, Route: %s, Compressed: %t, Error: %t, Data: %v, BodyLength: %d",
+	return fmt.Sprintf("Type: %s, ID: %d, Route: %s, Compressed: %t, Error: %t, Data: %v, BodyLength: %d, EntityID: %s, EntityType: %s",
 		types[m.Type],
 		m.ID,
 		m.Route,
 		m.compressed,
 		m.Err,
 		m.Data,
-		len(m.Data))
+		len(m.Data),
+		m.EntityID,
+		m.EntityType)
 }
 
 func routable(t Type) bool {

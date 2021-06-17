@@ -15,6 +15,9 @@ import (
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/config"
+	"github.com/tutumagi/pitaya/engine/bc"
+	"github.com/tutumagi/pitaya/engine/bc/basepart"
+	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/groups"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/serialize/json"
@@ -55,6 +58,10 @@ type (
 // NewRoom returns a Handler Base implementation
 func NewRoom() *Room {
 	return &Room{}
+}
+
+type RoomService struct {
+	basepart.Entity
 }
 
 // AfterInit component lifetime callback
@@ -116,13 +123,19 @@ func main() {
 	}
 
 	// rewrite component and handler name
-	room := NewRoom()
-	pitaya.Register(room,
+	desc := bc.RegisterService("room", &RoomService{})
+	desc.Routers.Register(&Room{},
 		component.WithName("room"),
 		component.WithNameFunc(strings.ToLower),
 	)
 
 	log.SetFlags(log.LstdFlags | log.Llongfile)
+
+	ee := basepart.CreateService("room", "")
+	roomService := ee.Val().(*RoomService)
+
+	pitaya.RegisterEntryService("room")
+	pitaya.RegisterPlayerService(metapart.TypNamePlayer)
 
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 

@@ -161,7 +161,7 @@ func (ns *NatsRPCClient) Call(
 	if err != nil {
 		return nil, err
 	}
-	marshalledData, err := proto.Marshal(&req)
+	marshalledData, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (ns *NatsRPCClient) Post(
 	if err != nil {
 		return err
 	}
-	marshalledData, err := proto.Marshal(&req)
+	marshalledData, err := proto.Marshal(req)
 	if err != nil {
 		return err
 	}

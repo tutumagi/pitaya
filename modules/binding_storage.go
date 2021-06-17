@@ -25,13 +25,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/session"
+	"go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/namespace"
 )
 
 // ETCDBindingStorage module that uses etcd to keep in which frontend server each user is bound

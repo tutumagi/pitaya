@@ -28,6 +28,9 @@ import (
 	"github.com/tutumagi/pitaya/constants"
 )
 
+type Callpart struct {
+}
+
 type (
 	//Handler represents a message.Message's handler's meta information.
 	Handler struct {

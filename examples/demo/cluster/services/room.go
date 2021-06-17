@@ -101,31 +101,6 @@ func (r *Room) Entry(ctx context.Context, msg []byte) (*JoinResponse, error) {
 	return &JoinResponse{Result: "ok"}, nil
 }
 
-// GetSessionData gets the session data
-func (r *Room) GetSessionData(ctx context.Context) (*SessionData, error) {
-	s := pitaya.GetSessionFromCtx(ctx)
-	return &SessionData{
-		Data: s.GetData(),
-	}, nil
-}
-
-// SetSessionData sets the session data
-func (r *Room) SetSessionData(ctx context.Context, data *SessionData) ([]byte, error) {
-	logger := pitaya.GetDefaultLoggerFromCtx(ctx)
-	s := pitaya.GetSessionFromCtx(ctx)
-	err := s.SetData(data.Data)
-	if err != nil {
-		logger.Error("Failed to set session data")
-		logger.Error(err)
-		return nil, err
-	}
-	err = s.PushToFront(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return []byte("success"), nil
-}
-
 // Join room
 func (r *Room) Join(ctx context.Context) (*JoinResponse, error) {
 	logger := pitaya.GetDefaultLoggerFromCtx(ctx)

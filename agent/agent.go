@@ -24,7 +24,7 @@ import (
 	"context"
 	"encoding/binary"
 	gojson "encoding/json"
-	e "errors"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -32,15 +32,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/conn/packet"
 	"github.com/tutumagi/pitaya/constants"
-	"github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/tracing"
@@ -48,7 +48,10 @@ import (
 	"github.com/tutumagi/pitaya/util/compression"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	e "github.com/tutumagi/pitaya/errors"
 )
+
+const handlerType = "handler"
 
 var (
 	// hbd contains the heartbeat packet data 8个字节，装64位整型的时间戳
@@ -57,8 +60,6 @@ var (
 	hrd  []byte
 	once sync.Once
 )
-
-const handlerType = "handler"
 
 type AgentCloseReason int32
 
@@ -88,16 +89,18 @@ func (a AgentCloseReason) String() string {
 type (
 	// Agent corresponds to a user and is used for storing raw Conn information
 	Agent struct {
-		Session            *session.Session          // session
-		appDieChan         chan bool                 // app die channel
-		chDie              chan struct{}             // wait for close
-		chSend             chan pendingWrite         // push message queue
-		chHbSend           chan pendingWrite         // push message queue (心跳专用)
-		chStopHeartbeat    chan struct{}             // stop heartbeats
-		chStopWrite        chan struct{}             // stop writing messages
-		ChRoleMessages     chan UnhandledRoleMessage // 用户请求的消息列表(队列)
-		closeMutex         sync.Mutex
-		conn               net.Conn            // low-level conn fd
+		Session         *session.Session  // session
+		appDieChan      chan bool         // app die channel
+		chDie           chan struct{}     // wait for close
+		chSend          chan pendingWrite // push message queue
+		chHbSend        chan pendingWrite // push message queue (心跳专用)
+		chStopHeartbeat chan struct{}     // stop heartbeats
+		chStopWrite     chan struct{}     // stop writing messages
+		// ChRoleMessages  chan UnhandledRoleMessage // 用户请求的消息列表(队列)
+		closeMutex sync.Mutex
+		conn       net.Conn // low-level conn fd
+		// conn acceptor.PlayerConn // low-level conn fd
+
 		decoder            codec.PacketDecoder // binary decoder
 		encoder            codec.PacketEncoder // binary encoder
 		heartbeatTimeout   time.Duration
@@ -107,6 +110,10 @@ type (
 		metricsReporters   []metrics.Reporter
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
+
+		pid *actor.PID
+		// 和哪个 EntityID 绑定在一起
+		ownerEntityID string
 	}
 
 	pendingMessage struct {
@@ -124,16 +131,102 @@ type (
 		err  error
 	}
 
-	UnhandledRoleMessage struct {
-		Ctx   context.Context
-		Route *route.Route
-		Msg   *message.Message
-	}
+	// UnhandledRoleMessage struct {
+	// 	Ctx   context.Context
+	// 	Route *route.Route
+	// 	Msg   *message.Message
+	// }
+
+	// unhandledMessage struct {
+	// 	ctx   context.Context
+	// 	agent *Agent
+	// 	route *route.Route
+	// 	msg   *message.Message
+	// }
 )
+
+// func (a *Agent) Receive(ctx actor.Context) {
+// 	switch msg := ctx.Message().(type) {
+// 	case *actor.Started:
+// 		logger.Log.Info("Agent Starting, initialize actor here")
+
+// 		a.Start(ctx)
+// 	case *actor.Stopping:
+// 		logger.Log.Info("Agent Stopping, actor is about to shut down")
+// 	case *actor.Stopped:
+// 		logger.Log.Info("Agent Stopped, actor and its children are stopped")
+// 	case *actor.Restarting:
+// 		logger.Log.Info("Agent Restarting, actor is about to restart")
+// 	case *actor.ReceiveTimeout:
+// 		logger.Log.Info("Agent ReceiveTimeout: %v", ctx.Self().String())
+
+// 	default:
+// 		logger.Log.Errorf("unknown message %v", msg)
+// 	}
+// }
+
+// func (a *Agent) InitActor(ctx actor.Context) {
+// 	props := actor.PropsFromProducer(func() actor.Actor {
+// 		return a
+// 	})
+// 	a.pid = ctx.SpawnPrefix(props, "agent")
+// }
+
+func (a *Agent) Start() {
+	// if a.ChRoleMessages == nil {
+	// 	// TODO 可配置
+	// 	// a.ChRoleMessages = make(chan UnhandledRoleMessage, h.MessageChanSize)
+	// 	a.ChRoleMessages = make(chan UnhandledRoleMessage, 100)
+	// }
+
+	// startup agent goroutine
+	go a.Handle()
+
+	logger.Log.Debugf("New session established: %s", a.String())
+
+	// // guarantee agent related resource is destroyed
+	// defer func() {
+	// 	// a.Session.Close()
+	// 	a.CloseByReason(AgentCloseByMessageEnd)
+	// 	logger.Log.Debugf("Session read goroutine exit, Session:", a.Session.DebugString())
+	// }()
+
+	// // 处理该连接的 packet 的主循环
+	// for {
+	// 	// logger.Log.Debugf("pitaya.handler begin to get nextmessage for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+	// 	msg, err := a.conn.GetNextMessage()
+
+	// 	if err != nil {
+	// 		logger.Log.Errorf("Error reading next available message(session:) err: %s", a.Session.DebugString(), err.Error())
+	// 		return
+	// 	}
+
+	// 	packets, err := a.decoder.Decode(msg)
+	// 	if err != nil {
+	// 		logger.Log.Errorf("Failed to decode message: %s", err.Error())
+	// 		return
+	// 	}
+
+	// 	if len(packets) < 1 {
+	// 		logger.Log.Warnf("Read no packets, data: %v", msg)
+	// 		continue
+	// 	}
+
+	// 	// logger.Log.Debugf("pitaya.handler end to decode nextmessage for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+
+	// 	// process all packet
+	// 	for i := range packets {
+	// 		if err := a.processPacket(packets[i]); err != nil {
+	// 			logger.Log.Errorf("Failed to process packet: %s", err.Error())
+	// 			return
+	// 		}
+	// 	}
+	// }
+}
 
 // NewAgent create new agent instance
 func NewAgent(
-	conn net.Conn,
+	conn acceptor.PlayerConn,
 	packetDecoder codec.PacketDecoder,
 	packetEncoder codec.PacketEncoder,
 	serializer serialize.Serializer,
@@ -213,8 +306,8 @@ func (a *Agent) packetEncodeMessage(m *message.Message) ([]byte, error) {
 
 func (a *Agent) send(pendingMsg pendingMessage) (err error) {
 	defer func() {
-		if e := recover(); e != nil {
-			err = errors.NewError(constants.ErrBrokenPipe, errors.ErrClientClosedRequest)
+		if erro := recover(); erro != nil {
+			err = e.NewError(constants.ErrBrokenPipe, e.ErrClientClosedRequest)
 		}
 	}()
 	a.reportChannelSize()
@@ -250,7 +343,7 @@ func (a *Agent) send(pendingMsg pendingMessage) (err error) {
 // Push implementation for session.NetworkEntity interface
 func (a *Agent) Push(route string, v interface{}) error {
 	if a.GetStatus() == constants.StatusClosed {
-		return errors.NewError(constants.ErrBrokenPipe, errors.ErrClientClosedRequest)
+		return e.NewError(constants.ErrBrokenPipe, e.ErrClientClosedRequest)
 	}
 
 	// 注释 by 涂飞，日志打印太多
@@ -275,7 +368,7 @@ func (a *Agent) ResponseMID(ctx context.Context, mid uint, v interface{}, isErro
 		err = isError[0]
 	}
 	if a.GetStatus() == constants.StatusClosed {
-		return errors.NewError(constants.ErrBrokenPipe, errors.ErrClientClosedRequest)
+		return e.NewError(constants.ErrBrokenPipe, e.ErrClientClosedRequest)
 	}
 
 	if mid <= 0 {
@@ -315,7 +408,7 @@ func (a *Agent) Close() error {
 		close(a.chStopWrite)
 		close(a.chStopHeartbeat)
 		close(a.chDie)
-		close(a.ChRoleMessages)
+		// close(a.ChRoleMessages)
 		onSessionClosed(a.Session)
 	}
 
@@ -372,8 +465,15 @@ func (a *Agent) Handle() {
 		logger.Log.Debugf("Session handle goroutine exit, SessionID=%d, UID=%d", a.Session.ID(), a.Session.UID())
 	}()
 
+	// 处理写
 	go a.write()
+	// 处理心跳
 	go a.heartbeat()
+	// 处理读
+	// 这里只有一个协程在访问 actor.Context，不会有问题
+	// go a.processGameMessage(ctx)
+	// // 处理读
+	// go a.processPackets()
 	select {
 	case <-a.chDie: // agent closed signal
 		return
@@ -507,8 +607,8 @@ func (a *Agent) write() {
 }
 
 // SendRequest sends a request to a server
-func (a *Agent) SendRequest(ctx context.Context, serverID, route string, v interface{}) (*protos.Response, error) {
-	return nil, e.New("not implemented")
+func (a *Agent) SendRequest(ctx context.Context, entityID, entityType string, serverID, route string, v interface{}) (*protos.Response, error) {
+	return nil, errors.New("not implemented")
 }
 
 // AnswerWithError answers with an error

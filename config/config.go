@@ -57,15 +57,10 @@ func (c *Config) fillDefaultValues() {
 		"pitaya.buffer.handler.localprocess":                    20,
 		"pitaya.buffer.handler.remoteprocess":                   20,
 		"pitaya.cluster.info.region":                            "",
-		"pitaya.cluster.rpc.client.grpc.dialtimeout":            "5s",
-		"pitaya.cluster.rpc.client.grpc.requesttimeout":         "5s",
-		"pitaya.cluster.rpc.client.grpc.lazyconnection":         false,
 		"pitaya.cluster.rpc.client.nats.connect":                "nats://localhost:4222",
 		"pitaya.cluster.rpc.client.nats.connectiontimeout":      "2s",
 		"pitaya.cluster.rpc.client.nats.maxreconnectionretries": 15,
 		"pitaya.cluster.rpc.client.nats.requesttimeout":         "5s",
-		"pitaya.cluster.rpc.server.grpc.externalport":           3434,
-		"pitaya.cluster.rpc.server.grpc.port":                   3434,
 		"pitaya.cluster.rpc.server.nats.connect":                "nats://localhost:4222",
 		"pitaya.cluster.rpc.server.nats.connectiontimeout":      "2s",
 		"pitaya.cluster.rpc.server.nats.maxreconnectionretries": 15,
@@ -123,6 +118,7 @@ func (c *Config) fillDefaultValues() {
 		"pitaya.worker.retry.maxDelay":                     10,
 		"pitaya.worker.retry.maxRandom":                    10,
 		"pitaya.worker.retry.minDelay":                     0,
+		"pitaya.boot.entityType":                           "account",
 	}
 
 	for param := range defaultsMap {

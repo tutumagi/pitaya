@@ -974,7 +974,7 @@ func TestAgentHandle(t *testing.T) {
 	ag := NewAgent(mockConn, nil, mockEncoder, mockSerializer, 1*time.Second, 1, nil, messageEncoder, nil)
 	assert.NotNil(t, ag)
 
-	go ag.Handle()
+	// go ag.Handle()
 	expectedBytes := []byte("bla")
 
 	// Sends two heartbeats and then times out

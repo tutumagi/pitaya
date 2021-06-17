@@ -37,8 +37,8 @@ var tcpAcceptorTables = []struct {
 	certs    []string
 	panicErr error
 }{
-	{"test_1", "0.0.0.0:0", []string{"./fixtures/server.crt", "./fixtures/server.key"}, nil},
-	{"test_2", "0.0.0.0:0", []string{}, nil},
+	{"test_1", "127.0.0.1:0", []string{"./fixtures/server.crt", "./fixtures/server.key"}, nil},
+	{"test_2", "127.0.0.1:0", []string{}, nil},
 	{"test_3", "127.0.0.1:0", []string{"wqd"}, constants.ErrInvalidCertificates},
 	{"test_4", "127.0.0.1:0", []string{"wqd", "wqdqwd", "wqdqdqwd"}, constants.ErrInvalidCertificates},
 }
@@ -159,7 +159,7 @@ func TestGetNextMessage(t *testing.T) {
 
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {
-			a := NewTCPAcceptor("0.0.0.0:0")
+			a := NewTCPAcceptor("127.0.0.1:0")
 			go a.ListenAndServe()
 			defer a.Stop()
 			c := a.GetConnChan()
@@ -188,7 +188,7 @@ func TestGetNextMessage(t *testing.T) {
 }
 
 func TestGetNextMessageTwoMessagesInBuffer(t *testing.T) {
-	a := NewTCPAcceptor("0.0.0.0:0")
+	a := NewTCPAcceptor("127.0.0.1:0")
 	go a.ListenAndServe()
 	defer a.Stop()
 	c := a.GetConnChan()
@@ -218,7 +218,7 @@ func TestGetNextMessageTwoMessagesInBuffer(t *testing.T) {
 }
 
 func TestGetNextMessageEOF(t *testing.T) {
-	a := NewTCPAcceptor("0.0.0.0:0")
+	a := NewTCPAcceptor("127.0.0.1:0")
 	go a.ListenAndServe()
 	defer a.Stop()
 	c := a.GetConnChan()
@@ -246,7 +246,7 @@ func TestGetNextMessageEOF(t *testing.T) {
 }
 
 func TestGetNextMessageInParts(t *testing.T) {
-	a := NewTCPAcceptor("0.0.0.0:0")
+	a := NewTCPAcceptor("127.0.0.1:0")
 	go a.ListenAndServe()
 	defer a.Stop()
 	c := a.GetConnChan()

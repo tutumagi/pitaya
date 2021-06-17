@@ -39,8 +39,8 @@ type RPCServer interface {
 	SetPitayaServer(protos.PitayaServer)
 
 	// 下面这两条 interface 是为了让 所有消息处理放在同一个协程处理
-	GetUnhandledRequestsChannel() chan *protos.Request
-	ProcessSingleMessage(req *protos.Request)
+	// GetUnhandledRequestsChannel() chan *protos.Request
+	// ProcessSingleMessage(req *protos.Request)
 
 	interfaces.Module
 }
@@ -52,7 +52,7 @@ type RPCClient interface {
 	SendKick(userID string, serverType string, kick *protos.KickMsg) error
 	BroadcastSessionBind(uid string) error
 	Call(ctx context.Context, rpcType protos.RPCType, route *route.Route, session *session.Session, msg *message.Message, server *Server) (*protos.Response, error)
-	// Post calls a method remotelly
+	// Post async calls a method remotelly
 	Post(ctx context.Context, rpcType protos.RPCType, route *route.Route, session *session.Session, msg *message.Message, server *Server) error
 	interfaces.Module
 }
@@ -91,10 +91,12 @@ func buildRequest(
 	session *session.Session,
 	msg *message.Message,
 	thisServer *Server,
-) (protos.Request, error) {
-	req := protos.Request{
+) (*protos.Request, error) {
+	req := &protos.Request{
 		Type: rpcType,
-		Msg: &protos.Msg{
+		Msg: &protos.MsgV2{
+			Eid:   msg.EntityID,
+			Typ:   msg.EntityType,
 			Route: route.String(),
 			Data:  msg.Data,
 		},
@@ -129,7 +131,6 @@ func buildRequest(
 		req.Session = &protos.Session{
 			Id:     session.ID(),
 			Uid:    session.UID(),
-			Data:   session.GetDataEncoded(),
 			RoleID: session.RoleID(),
 		}
 	}
