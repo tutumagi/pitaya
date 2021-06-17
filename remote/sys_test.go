@@ -21,7 +21,6 @@
 package remote
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -38,14 +37,10 @@ func TestBindSession(t *testing.T) {
 	s := &Sys{}
 	ss := session.New(nil, true)
 	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello": "test",
-	})
-	assert.NoError(t, err)
+
 	data := &protos.Session{
-		Id:   ss.ID(),
-		Uid:  uid,
-		Data: d,
+		Id:  ss.ID(),
+		Uid: uid,
 	}
 	res, err := s.BindSession(nil, data)
 	assert.NoError(t, err)
@@ -57,16 +52,12 @@ func TestBindSessionShouldErrorIfNotExists(t *testing.T) {
 	t.Parallel()
 	s := &Sys{}
 	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello": "test",
-	})
-	assert.NoError(t, err)
+
 	data := &protos.Session{
-		Id:   133,
-		Uid:  uid,
-		Data: d,
+		Id:  133,
+		Uid: uid,
 	}
-	_, err = s.BindSession(nil, data)
+	_, err := s.BindSession(nil, data)
 	assert.EqualError(t, constants.ErrSessionNotFound, err.Error())
 }
 
@@ -75,14 +66,9 @@ func TestBindSessionShouldErrorIfAlreadyBound(t *testing.T) {
 	s := &Sys{}
 	ss := session.New(nil, true)
 	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello": "test",
-	})
-	assert.NoError(t, err)
 	data := &protos.Session{
-		Id:   ss.ID(),
-		Uid:  uid,
-		Data: d,
+		Id:  ss.ID(),
+		Uid: uid,
 	}
 	res, err := s.BindSession(nil, data)
 	assert.NoError(t, err)
@@ -139,17 +125,12 @@ func TestKick(t *testing.T) {
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
 	ss := session.New(mockEntity, true)
 	uid := uuid.New().String()
-	d, err := json.Marshal(map[string]interface{}{
-		"hello":   "test",
-		"hello22": 2,
-	})
-	assert.NoError(t, err)
+
 	data := &protos.Session{
-		Id:   ss.ID(),
-		Uid:  uid,
-		Data: d,
+		Id:  ss.ID(),
+		Uid: uid,
 	}
-	_, err = s.BindSession(nil, data)
+	_, err := s.BindSession(nil, data)
 	assert.NoError(t, err)
 
 	mockEntity.EXPECT().Kick(nil)

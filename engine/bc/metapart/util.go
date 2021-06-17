@@ -36,7 +36,6 @@ import (
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/serialize"
-	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/util"
 )
 
@@ -142,7 +141,7 @@ func processHandlerMessage(
 	ctx context.Context,
 	rt *route.Route,
 	serializer serialize.Serializer,
-	session *session.Session,
+	// session *session.Session,
 	entity interface{},
 	routers *Routers,
 	data []byte,
@@ -155,8 +154,8 @@ func processHandlerMessage(
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = context.WithValue(ctx, constants.SessionCtxKey, session)
-	ctx = util.CtxWithDefaultLogger(ctx, rt.String(), session.UID())
+	// ctx = context.WithValue(ctx, constants.SessionCtxKey, session)
+	// ctx = util.CtxWithDefaultLogger(ctx, rt.String(), session.UID())
 
 	// tufei
 	h, err := routers.getHandler(rt)

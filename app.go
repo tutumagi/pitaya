@@ -131,7 +131,7 @@ var (
 	}
 
 	// remoteService  *callpart.RemoteService
-	handlerService *AppMsgProcessor
+	handlerService *GateProcessor
 )
 
 // Configure configures the app
@@ -310,7 +310,7 @@ func Start() {
 
 	sys := actor.NewActorSystem()
 
-	handlerService = NewAppProcessor(
+	handlerService = NewGateProcessor(
 		app.dieChan,
 		app.packetDecoder,
 		app.packetEncoder,
@@ -341,7 +341,7 @@ func Start() {
 	// 	app.server,
 	// )
 
-	app.rpcServer.SetPitayaServer(handlerService)
+	app.rpcServer.SetPitayaServer(handlerService.remote)
 
 	initSysRemotes()
 
@@ -403,7 +403,7 @@ func listen() {
 
 	if app.serverMode == Cluster && app.server.Frontend && app.config.GetBool("pitaya.session.unique") {
 		unique := mods.NewUniqueSession(app.server, app.rpcServer, app.rpcClient)
-		handlerService.AddRemoteBindingListener(unique)
+		handlerService.remote.AddRemoteBindingListener(unique)
 		RegisterModule(unique, "uniqueSession")
 	}
 
@@ -412,4 +412,8 @@ func listen() {
 	logger.Log.Info("all modules started!")
 
 	app.running = true
+}
+
+func isCluster() bool {
+	return app.serverMode == Cluster
 }

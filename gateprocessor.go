@@ -2,15 +2,22 @@ package pitaya
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
+	"github.com/tutumagi/pitaya/conn/packet"
+	"github.com/tutumagi/pitaya/constants"
+	pcontext "github.com/tutumagi/pitaya/context"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
@@ -19,29 +26,12 @@ import (
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
+	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/timer"
 	"github.com/tutumagi/pitaya/tracing"
 )
 
-var handlerType = "handler"
-
-type unhandledMessage struct {
-	ctx   context.Context
-	agent *agent.Agent
-	route *route.Route
-	msg   *message.Message
-}
-
-type EntityManager interface {
-	// 通过实体 ID 获取 typeName
-	GetTypName(id string) (string, error)
-	// 获取实际的实体对象，可能是 cellpart.Entity.Val() ，也可能是 basepart.Entity.Val()，所以用 interface{}
-	GetEntityVal(id string, typName string) interface{}
-	// 获取实体绑定的pid
-	GetEntityPid(id string, typName string) *actor.PID
-}
-
-type AppMsgProcessor struct {
+type GateProcessor struct {
 	appDieChan      chan bool             // die channel app
 	chLocalProcess  chan unhandledMessage // channel of messages that will be processed locally
 	chRemoteProcess chan unhandledMessage // channel of messages that will be processed remotely
@@ -65,7 +55,7 @@ type AppMsgProcessor struct {
 	actorSystem   *actor.ActorSystem
 }
 
-func NewAppProcessor(
+func NewGateProcessor(
 	dieChan chan bool,
 	packetDecoder codec.PacketDecoder,
 	packetEncoder codec.PacketEncoder,
@@ -84,9 +74,9 @@ func NewAppProcessor(
 	router *router.Router,
 
 	system *actor.ActorSystem,
-) *AppMsgProcessor {
+) *GateProcessor {
 	remote := NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
-	p := &AppMsgProcessor{
+	p := &GateProcessor{
 		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
 		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
 		decoder:            packetDecoder,
@@ -106,7 +96,7 @@ func NewAppProcessor(
 	return p
 }
 
-func (p *AppMsgProcessor) Start() {
+func (p GateProcessor) Start() {
 	// for i := 0; i < 10; i++ {
 	// 	go p.Dispatch()
 	// }
@@ -118,7 +108,162 @@ func (p *AppMsgProcessor) Start() {
 	}
 }
 
-func (p *AppMsgProcessor) Dispatch(thread int) {
+// Handle handles messages from a conn
+func (h GateProcessor) Handle(conn acceptor.PlayerConn) {
+	// create a client agent and startup write goroutine
+	a := agent.NewAgent(conn, h.decoder, h.encoder, h.serializer, h.heartbeatTimeout, h.messagesBufferSize, h.appDieChan, h.messageEncoder, h.metricsReporters)
+
+	// startup agent goroutine
+	go a.Handle()
+	// go h.processMessage(a)
+
+	logger.Log.Debugf("New session established: %s", a.String())
+
+	// guarantee agent related resource is destroyed
+	defer func() {
+		// a.Session.Close()
+		a.CloseByReason(agent.AgentCloseByMessageEnd)
+		logger.Log.Debugf("Session read goroutine exit, SessionID=%d, UID=%d", a.Session.ID(), a.Session.UID())
+	}()
+
+	for {
+		// logger.Log.Debugf("pitaya.handler begin to get nextmessage for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+		msg, err := conn.GetNextMessage()
+
+		if err != nil {
+			logger.Log.Errorf("Error reading next available message: %s", err.Error())
+			return
+		}
+
+		packets, err := h.decoder.Decode(msg)
+		if err != nil {
+			logger.Log.Errorf("Failed to decode message: %s", err.Error())
+			return
+		}
+
+		if len(packets) < 1 {
+			logger.Log.Warnf("Read no packets, data: %v", msg)
+			continue
+		}
+
+		// logger.Log.Debugf("pitaya.handler end to decode nextmessage for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+
+		// process all packet
+		for i := range packets {
+			if err := h.processPacket(a, packets[i]); err != nil {
+				logger.Log.Errorf("Failed to process packet: %s", err.Error())
+				return
+			}
+		}
+	}
+}
+
+func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
+	switch p.Type {
+	case packet.Handshake:
+		logger.Log.Debug("Received handshake packet")
+		// logger.Log.Infof("pitaya.handler end to processPacket :handshake packet for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+		if err := a.SendHandshakeResponse(); err != nil {
+			logger.Log.Errorf("Error sending handshake response: %s", err.Error())
+			return err
+		}
+		logger.Log.Debugf("Session handshake Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
+
+		// Parse the json sent with the handshake by the client
+		handshakeData := &session.HandshakeData{}
+		err := json.Unmarshal(p.Data, handshakeData)
+		if err != nil {
+			a.SetStatus(constants.StatusClosed)
+			return fmt.Errorf("Invalid handshake data. Id=%d", a.Session.ID())
+		}
+
+		a.Session.SetHandshakeData(handshakeData)
+		a.SetStatus(constants.StatusHandshake)
+		// err = a.Session.Set(constants.IPVersionKey, a.IPVersion())
+		// if err != nil {
+		// 	logger.Log.Warnf("failed to save ip version on session: %q\n", err)
+		// }
+
+		logger.Log.Debug("Successfully saved handshake data")
+
+	case packet.HandshakeAck:
+		a.SetStatus(constants.StatusWorking)
+		logger.Log.Debugf("Receive handshake ACK Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
+		// logger.Log.Infof("pitaya.handler end to processPacket :handshake ACK for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
+
+		// 连接连成功了
+		// a.ownerEntityID
+		// RPC(context.TODO(), )
+	case packet.Data:
+		if a.GetStatus() < constants.StatusWorking {
+			return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
+				a.RemoteAddr().String())
+		}
+
+		msg, err := message.Decode(p.Data)
+		if err != nil {
+			return err
+		}
+
+		// logger.Log.Debugf("pitaya.handler begin to processMessage for SessionID=%d, UID=%s, route=%s", a.Session.ID(), a.Session.UID(), msg.Route)
+		h.processMessage(a, msg)
+		// logger.Log.Debugf("pitaya.handler end to processMessage for SessionID=%d, UID=%s, route=%s", a.Session.ID(), a.Session.UID(), msg.Route)
+
+	case packet.Heartbeat:
+		// expected
+	}
+
+	a.SetLastAt()
+	return nil
+}
+
+// 处理连接来的消息
+func (p GateProcessor) processMessage(a *agent.Agent, msg *message.Message) {
+	requestID := uuid.New()
+	ctx := pcontext.AddToPropagateCtx(context.Background(), constants.StartTimeKey, time.Now().UnixNano())
+	ctx = pcontext.AddToPropagateCtx(ctx, constants.RouteKey, msg.Route)
+	ctx = pcontext.AddToPropagateCtx(ctx, constants.RequestIDKey, requestID.String())
+	tags := opentracing.Tags{
+		"local.id":   p.server,
+		"span.kind":  "server",
+		"msg.type":   strings.ToLower(msg.Type.String()),
+		"user.id":    a.Session.UID(),
+		"request.id": requestID.String(),
+	}
+	ctx = tracing.StartSpan(ctx, msg.Route, tags)
+	ctx = context.WithValue(ctx, constants.SessionCtxKey, a.Session)
+
+	r, err := route.Decode(msg.Route)
+	if err != nil {
+		logger.Log.Errorf("Failed to decode route: %s", err.Error())
+		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))
+		return
+	}
+
+	if r.SvType == "" {
+		r.SvType = p.server.Type
+	}
+
+	//该消息由协程池竞争执行
+	message := unhandledMessage{
+		ctx:   ctx,
+		agent: a,
+		route: r,
+		msg:   msg,
+	}
+	if r.SvType == p.server.Type {
+		p.chLocalProcess <- message
+	} else {
+		// if p.remoteService != nil {
+		if p.remote != nil {
+			p.chRemoteProcess <- message
+		} else {
+			logger.Log.Warnf("request made to another server type but no remoteService running")
+		}
+	}
+}
+
+func (p GateProcessor) Dispatch(thread int) {
 	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
 	// defer timer.GlobalTicker.Stop()
 	defer func() {
@@ -159,38 +304,7 @@ func (p *AppMsgProcessor) Dispatch(thread int) {
 	}
 }
 
-func (p *AppMsgProcessor) CallEntityFromLocal(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	reply proto.Message,
-	arg proto.Message,
-) error {
-	return p.localCall(ctx, entityID, entityType, routeStr, reply, arg, 0)
-	// rt, err := route.Decode(router)
-	// if err != nil {
-	// 	// logger.Errorf("cannot decode route:%s err:%s", router, err)
-	// 	return err
-	// }
-
-	// typName, err := p.entityManager.GetTypName(entityID)
-	// if err != nil {
-	// 	logger.Warnf("找不到该实体的类型 id:%s err:%s", entityID, err)
-	// 	return err
-	// }
-	// routers := rtManager.getRoute(typName)
-
-	// h, err := routers.getHandler(rt)
-	// if err != nil {
-	// 	return e.NewError(err, e.ErrNotFoundCode)
-	// }
-
-	// processHandlerMessage(nil, rt, h, p.remoteService.serializer)
-	return nil
-}
-
-func (p *AppMsgProcessor) localProcess(ctx context.Context, a *agent.Agent, route *route.Route, msg *message.Message) {
+func (p GateProcessor) localProcess(ctx context.Context, a *agent.Agent, route *route.Route, msg *message.Message) {
 	var mid uint
 	switch msg.Type {
 	case message.Request:
@@ -270,134 +384,5 @@ func (p *AppMsgProcessor) localProcess(ctx context.Context, a *agent.Agent, rout
 	} else {
 		metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
 		tracing.FinishSpan(ctx, err)
-	}
-}
-
-func (p *AppMsgProcessor) localCall(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message, mid int) error {
-	var ret interface{}
-	var err error
-
-	entity := p.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		// return &protos.Response{
-		// 	Error: &protos.Error{
-		// 		Code: e.ErrUnknownCode,
-		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-		// 	},
-		// }
-		err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
-		return err
-	}
-
-	// TODO 本地 call 这里marshal了一次，到实际call方法时，又unmarshal一次，重复了
-	argBytes, _ := p.serializer.Marshal(arg)
-
-	ret, err = p.actorSystem.Root.RequestFuture(
-		p.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: &protos.Request{
-				Type: protos.RPCType_User,
-				Msg: &protos.MsgV2{
-					Id:    uint64(mid),
-					Route: routeStr,
-					Data:  argBytes,
-					// Type:  protos.MsgType(msg.Type),
-					Eid: entityID,
-					Typ: entityType,
-					// Reply: ,
-				},
-			},
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return err
-	}
-	if reply != nil {
-		err := p.serializer.Unmarshal(ret.([]byte), reply)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
-	// ret, err := processHandlerMessage(
-	// 	ctx,
-	// 	route,
-	// 	p.serializer,
-	// 	a.Session,
-	// 	msg.EntityID,
-	// 	msg.EntityType,
-	// 	p,
-	// 	msg.Data,
-	// 	msg.Type,
-	// 	false,
-	// )
-	// if msg.Type != message.Notify {
-	// 	if err != nil {
-	// 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
-	// 		a.AnswerWithError(ctx, mid, err)
-	// 	} else {
-	// 		err := a.Session.ResponseMID(ctx, mid, ret)
-	// 		if err != nil {
-	// 			tracing.FinishSpan(ctx, err)
-	// 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
-	// 		}
-	// 	}
-	// } else {
-	// 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
-	// 	tracing.FinishSpan(ctx, err)
-	// }
-}
-
-func (r *AppMsgProcessor) processRemoteMessage2Entity(ctx context.Context, req *protos.Request) *protos.Response {
-	entityID := req.Msg.Eid
-	entityType := req.Msg.Typ
-	entity := r.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-			},
-		}
-	}
-
-	rsp, err := r.actorSystem.Root.RequestFuture(
-		r.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: req,
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("actor.proto requestFuture error:%s", err),
-			},
-		}
-	} else {
-		if rspp, ok := rsp.(*protos.Response); ok {
-			return rspp
-		} else {
-			return &protos.Response{
-				Error: &protos.Error{
-					Code: e.ErrUnknownCode,
-					Msg:  "rsp type is not *protos.Response",
-				},
-			}
-		}
 	}
 }

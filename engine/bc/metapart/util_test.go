@@ -44,7 +44,6 @@ import (
 	"github.com/tutumagi/pitaya/protos/test"
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/serialize/mocks"
-	"github.com/tutumagi/pitaya/session"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
@@ -360,7 +359,7 @@ func TestProcessHandlerMessage(t *testing.T) {
 	routers.handlers[rtSt.Short()] = &component.Handler{Receiver: reflect.ValueOf(tObj), Method: m, Type: m.Type.In(2)}
 	defer func() { routers.handlers = make(map[string]*component.Handler, 0) }()
 
-	ss := session.New(nil, false)
+	// ss := session.New(nil, false)
 
 	tables := []struct {
 		name         string
@@ -406,7 +405,7 @@ func TestProcessHandlerMessage(t *testing.T) {
 				nil,
 				table.route,
 				mockSerializer,
-				ss,
+				// ss,
 				nil,
 				routers,
 				nil,
@@ -432,8 +431,18 @@ func TestProcessHandlerMessageBrokenBeforePipeline(t *testing.T) {
 	pipeline.BeforeHandler.PushFront(before)
 	defer pipeline.BeforeHandler.Clear()
 
-	ss := session.New(nil, false)
-	out, err := processHandlerMessage(nil, rt, nil, ss, nil, routers, nil, message.Request, false)
+	// ss := session.New(nil, false)
+	out, err := processHandlerMessage(
+		nil,
+		rt,
+		nil,
+		// ss,
+		nil,
+		routers,
+		nil,
+		message.Request,
+		false,
+	)
 	assert.Nil(t, out)
 	assert.Equal(t, expected, err)
 }
@@ -458,7 +467,7 @@ func TestProcessHandlerMessageBrokenAfterPipeline(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ss := session.New(nil, false)
+	// ss := session.New(nil, false)
 	mockSerializer := mocks.NewMockSerializer(ctrl)
 	mockSerializer.EXPECT().Unmarshal(gomock.Any(), gomock.Any()).Return(nil).Do(
 		func(p []byte, arg interface{}) {
@@ -469,7 +478,7 @@ func TestProcessHandlerMessageBrokenAfterPipeline(t *testing.T) {
 		nil,
 		rt,
 		mockSerializer,
-		ss,
+		// ss,
 		nil,
 		routers,
 		nil,

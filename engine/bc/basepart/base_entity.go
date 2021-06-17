@@ -11,6 +11,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/tutumagi/pitaya"
+	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/dbmgr"
@@ -18,7 +19,6 @@ import (
 	err "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/timer"
 	"gitlab.gamesword.com/nut/dreamcity/game/define"
 	"gitlab.gamesword.com/nut/entitygen/attr"
@@ -68,7 +68,7 @@ type Entity struct {
 
 	pid *actor.PID
 
-	client session.NetworkEntity
+	client *agent.Remote
 }
 
 // NewEntity ctor
@@ -111,7 +111,7 @@ func (e *Entity) GiveClientTo(other *Entity) {
 }
 
 // abouc client
-func (e *Entity) SetClient(client session.NetworkEntity) {
+func (e *Entity) SetClient(client *agent.Remote) {
 	oldClient := e.client
 	if oldClient == client {
 		return
@@ -155,7 +155,7 @@ func (e *Entity) SetClient(client session.NetworkEntity) {
 	}
 }
 
-func (e *Entity) assignClient(client session.NetworkEntity) {
+func (e *Entity) assignClient(client *agent.Remote) {
 	if e.client != nil {
 		// e.client.ownerid = ""
 	}

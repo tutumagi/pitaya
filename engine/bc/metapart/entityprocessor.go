@@ -26,7 +26,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
@@ -182,35 +181,34 @@ func (r *EntityMsgProcessor) handleRPCUser(ctx context.Context, req *protos.Requ
 }
 
 func (r *EntityMsgProcessor) handleRPCSys(ctx context.Context, req *protos.Request, rt *route.Route, entity interface{}, routers *Routers) *protos.Response {
-	reply := req.GetMsg().GetReply()
+	// reply := req.GetMsg().GetReply()
 	response := &protos.Response{}
 	// (warning) a new agent is created for every new request
-	a, err := agent.NewRemote(
-		req.GetSession(),
-		reply,
-		r.rpcClient,
-		r.encoder,
-		r.serializer,
-		r.serviceDiscovery,
-		req.FrontendID,
-		r.messageEncoder,
-	)
-	if err != nil {
-		logger.Log.Warn("pitaya/handler: cannot instantiate remote agent")
-		response := &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrInternalCode,
-				Msg:  err.Error(),
-			},
-		}
-		return response
-	}
+	// a, err := agent.NewRemote(
+	// 	req.GetSession(),
+	// 	reply,
+	// 	r.rpcClient,
+	// 	r.encoder,
+	// 	r.serializer,
+	// 	r.serviceDiscovery,
+	// 	req.FrontendID,
+	// 	r.messageEncoder,
+	// )
+	// if err != nil {
+	// 	logger.Log.Warn("pitaya/handler: cannot instantiate remote agent")
+	// 	response := &protos.Response{
+	// 		Error: &protos.Error{
+	// 			Code: e.ErrInternalCode,
+	// 			Msg:  err.Error(),
+	// 		},
+	// 	}
+	// 	return response
+	// }
 
 	ret, err := processHandlerMessage(
 		ctx,
 		rt,
 		r.serializer,
-		a.Session,
 		entity,
 		routers,
 		req.GetMsg().GetData(),

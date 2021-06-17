@@ -23,7 +23,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"reflect"
 	"testing"
 
@@ -32,10 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tutumagi/pitaya/cluster"
 	clustermocks "github.com/tutumagi/pitaya/cluster/mocks"
-	codecmocks "github.com/tutumagi/pitaya/conn/codec/mocks"
 	"github.com/tutumagi/pitaya/conn/message"
-	messagemocks "github.com/tutumagi/pitaya/conn/message/mocks"
-	"github.com/tutumagi/pitaya/conn/packet"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/route"
@@ -48,8 +44,6 @@ type someStruct struct {
 
 func TestNewRemote(t *testing.T) {
 	uid := uuid.New().String()
-	ss := &protos.Session{Uid: uid}
-	reply := uuid.New().String()
 	frontendID := uuid.New().String()
 
 	ctrl := gomock.NewController(t)
@@ -58,21 +52,18 @@ func TestNewRemote(t *testing.T) {
 	mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
 	mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
 	mockSerializer := serializemocks.NewMockSerializer(ctrl)
-	mockEncoder := codecmocks.NewMockPacketEncoder(ctrl)
-	mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
+	// mockEncoder := codecmocks.NewMockPacketEncoder(ctrl)
+	// mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
 
-	remote, err := NewRemote(ss, reply, mockRPCClient, mockEncoder, mockSerializer, mockSD, frontendID, mockMessageEncoder)
+	remote, err := NewRemote(0, frontendID, uid, "", mockRPCClient, mockSerializer, mockSD)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	assert.IsType(t, make(chan struct{}), remote.chDie)
-	assert.Equal(t, reply, remote.reply)
 	assert.Equal(t, mockSerializer, remote.serializer)
-	assert.Equal(t, mockEncoder, remote.encoder)
 	assert.Equal(t, mockRPCClient, remote.rpcClient)
 	assert.Equal(t, mockSD, remote.serviceDiscovery)
 	assert.Equal(t, frontendID, remote.frontendID)
-	assert.NotNil(t, remote.Session)
-	assert.False(t, remote.Session.IsFrontend)
+	assert.Equal(t, uid, remote.uid)
 }
 
 // func TestNewRemoteFailsIfFailedToSetEncodedData(t *testing.T) {
@@ -84,7 +75,7 @@ func TestNewRemote(t *testing.T) {
 // }
 
 func TestAgentRemoteClose(t *testing.T) {
-	remote, err := NewRemote(nil, "", nil, nil, nil, nil, "", nil)
+	remote, err := NewRemote(0, "", "", "", nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	err = remote.Close()
@@ -92,7 +83,7 @@ func TestAgentRemoteClose(t *testing.T) {
 }
 
 func TestAgentRemoteRemoteAddr(t *testing.T) {
-	remote, err := NewRemote(nil, "", nil, nil, nil, nil, "", nil)
+	remote, err := NewRemote(0, "", "", "", nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	addr := remote.RemoteAddr()
@@ -125,10 +116,10 @@ func TestAgentRemotePush(t *testing.T) {
 				table.rpcClient = clustermocks.NewMockRPCClient(ctrl)
 			}
 			fSvID := "123id"
-			ss := &protos.Session{Uid: table.uid}
+			// ss := &protos.Session{Uid: table.uid}
 			mockSerializer := serializemocks.NewMockSerializer(ctrl)
 			mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
-			remote, err := NewRemote(ss, "", table.rpcClient, nil, mockSerializer, mockSD, fSvID, nil)
+			remote, err := NewRemote(0, fSvID, table.uid, "", table.rpcClient, mockSerializer, mockSD)
 			assert.NoError(t, err)
 			assert.NotNil(t, remote)
 
@@ -165,11 +156,11 @@ func TestKickRemote(t *testing.T) {
 	defer ctrl.Finish()
 
 	rpcClient := clustermocks.NewMockRPCClient(ctrl)
-	ss := &protos.Session{Uid: uuid.New().String()}
+	uid := uuid.New().String()
 	mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
 	mockSerializer := serializemocks.NewMockSerializer(ctrl)
 	frontID := uuid.New().String()
-	remote, err := NewRemote(ss, "", rpcClient, nil, mockSerializer, mockSD, frontID, nil)
+	remote, err := NewRemote(0, frontID, uid, "", rpcClient, mockSerializer, mockSD)
 	assert.NoError(t, err)
 
 	mockSD.EXPECT().GetServer(frontID)
@@ -181,78 +172,78 @@ func TestKickRemote(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestAgentRemoteResponseMID(t *testing.T) {
-	tables := []struct {
-		name         string
-		mid          uint
-		data         interface{}
-		msgErr       bool
-		errEncode    error
-		errSerialize error
-		err          error
-	}{
-		{"success_raw_message", uint(rand.Int()), []byte("ok"), false, nil, nil, nil},
-		{"success_struct_message", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, nil, nil},
-		{"success_struct_message_with_error", uint(rand.Int()), &someStruct{A: "ok"}, true, nil, nil, nil},
-		{"failed_struct_message_serialize", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, errors.New("failed serialize"), errors.New("failed serialize")},
-		{"failed_encode", uint(rand.Int()), &someStruct{A: "ok"}, false, errors.New("failed encode"), nil, errors.New("failed encode")},
-		{"failed_send", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, nil, errors.New("failed send")},
-		{"zero_mid", 0, nil, false, nil, nil, constants.ErrSessionOnNotify},
-	}
+// func TestAgentRemoteResponseMID(t *testing.T) {
+// 	tables := []struct {
+// 		name         string
+// 		mid          uint
+// 		data         interface{}
+// 		msgErr       bool
+// 		errEncode    error
+// 		errSerialize error
+// 		err          error
+// 	}{
+// 		{"success_raw_message", uint(rand.Int()), []byte("ok"), false, nil, nil, nil},
+// 		{"success_struct_message", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, nil, nil},
+// 		{"success_struct_message_with_error", uint(rand.Int()), &someStruct{A: "ok"}, true, nil, nil, nil},
+// 		{"failed_struct_message_serialize", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, errors.New("failed serialize"), errors.New("failed serialize")},
+// 		{"failed_encode", uint(rand.Int()), &someStruct{A: "ok"}, false, errors.New("failed encode"), nil, errors.New("failed encode")},
+// 		{"failed_send", uint(rand.Int()), &someStruct{A: "ok"}, false, nil, nil, errors.New("failed send")},
+// 		{"zero_mid", 0, nil, false, nil, nil, constants.ErrSessionOnNotify},
+// 	}
 
-	for _, table := range tables {
-		t.Run(table.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+// 	for _, table := range tables {
+// 		t.Run(table.name, func(t *testing.T) {
+// 			ctrl := gomock.NewController(t)
+// 			defer ctrl.Finish()
 
-			reply := uuid.New().String()
-			uid := uuid.New().String()
-			ss := &protos.Session{Uid: uid}
-			mockEnconder := codecmocks.NewMockPacketEncoder(ctrl)
-			mockSerializer := serializemocks.NewMockSerializer(ctrl)
-			mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
-			messageEncoder := message.NewMessagesEncoder(false)
-			remote, err := NewRemote(ss, reply, mockRPCClient, mockEnconder, mockSerializer, nil, "", messageEncoder)
-			assert.NoError(t, err)
-			assert.NotNil(t, remote)
+// 			reply := uuid.New().String()
+// 			uid := uuid.New().String()
+// 			ss := &protos.Session{Uid: uid}
+// 			mockEnconder := codecmocks.NewMockPacketEncoder(ctrl)
+// 			mockSerializer := serializemocks.NewMockSerializer(ctrl)
+// 			mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
+// 			messageEncoder := message.NewMessagesEncoder(false)
+// 			remote, err := NewRemote(ss, reply, mockRPCClient, mockEnconder, mockSerializer, nil, "", messageEncoder)
+// 			assert.NoError(t, err)
+// 			assert.NotNil(t, remote)
 
-			if table.mid != uint(0) {
-				serializeRet := []byte("ok")
-				if reflect.TypeOf(table.data) == reflect.TypeOf(([]byte)(nil)) {
-					serializeRet = table.data.([]byte)
-				} else {
-					mockSerializer.EXPECT().Marshal(table.data).Return(serializeRet, table.errSerialize)
-				}
+// 			if table.mid != uint(0) {
+// 				serializeRet := []byte("ok")
+// 				if reflect.TypeOf(table.data) == reflect.TypeOf(([]byte)(nil)) {
+// 					serializeRet = table.data.([]byte)
+// 				} else {
+// 					mockSerializer.EXPECT().Marshal(table.data).Return(serializeRet, table.errSerialize)
+// 				}
 
-				if table.errSerialize == nil {
-					rawMsg := &message.Message{
-						Type: message.Response,
-						Data: serializeRet,
-						ID:   table.mid,
-						Err:  table.msgErr,
-					}
-					expectedMsg, _ := messageEncoder.Encode(rawMsg)
-					mockEnconder.EXPECT().Encode(gomock.Any(), expectedMsg).Return(nil, table.errEncode).Do(
-						func(typ packet.Type, d []byte) {
-							// cannot compare inside the expect because they are equivalent but not equal
-							assert.EqualValues(t, packet.Data, typ)
-						})
+// 				if table.errSerialize == nil {
+// 					rawMsg := &message.Message{
+// 						Type: message.Response,
+// 						Data: serializeRet,
+// 						ID:   table.mid,
+// 						Err:  table.msgErr,
+// 					}
+// 					expectedMsg, _ := messageEncoder.Encode(rawMsg)
+// 					mockEnconder.EXPECT().Encode(gomock.Any(), expectedMsg).Return(nil, table.errEncode).Do(
+// 						func(typ packet.Type, d []byte) {
+// 							// cannot compare inside the expect because they are equivalent but not equal
+// 							assert.EqualValues(t, packet.Data, typ)
+// 						})
 
-					if table.errEncode == nil {
-						mockRPCClient.EXPECT().Send(reply, gomock.Any()).Return(table.err)
-					}
-				}
+// 					if table.errEncode == nil {
+// 						mockRPCClient.EXPECT().Send(reply, gomock.Any()).Return(table.err)
+// 					}
+// 				}
 
-			}
-			if table.msgErr {
-				err = remote.ResponseMID(nil, table.mid, table.data, table.msgErr)
-			} else {
-				err = remote.ResponseMID(nil, table.mid, table.data)
-			}
-			assert.Equal(t, table.err, err)
-		})
-	}
-}
+// 			}
+// 			if table.msgErr {
+// 				err = remote.ResponseMID(nil, table.mid, table.data, table.msgErr)
+// 			} else {
+// 				err = remote.ResponseMID(nil, table.mid, table.data)
+// 			}
+// 			assert.Equal(t, table.err, err)
+// 		})
+// 	}
+// }
 
 func TestAgentRemoteSendRequest(t *testing.T) {
 	tables := []struct {
@@ -281,8 +272,8 @@ func TestAgentRemoteSendRequest(t *testing.T) {
 			mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
 			mockSerializer := serializemocks.NewMockSerializer(ctrl)
 			mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
-			mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
-			remote, err := NewRemote(nil, "", mockRPCClient, nil, mockSerializer, mockSD, "", mockMessageEncoder)
+			// mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
+			remote, err := NewRemote(0, "", "", "", mockRPCClient, mockSerializer, mockSD)
 			assert.NoError(t, err)
 			assert.NotNil(t, remote)
 

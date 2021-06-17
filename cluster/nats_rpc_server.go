@@ -186,7 +186,8 @@ func (ns *NatsRPCServer) subscribeToUserMessages(uid string, svType string) (*na
 // 处理 rpc 过来的消息
 func (ns *NatsRPCServer) handleMessages() {
 	defer (func() {
-		ns.conn.Close()
+		// https://github.com/topfreegames/pitaya/pull/172/files
+		ns.conn.Drain()
 		close(ns.unhandledReqCh)
 		close(ns.subChan)
 		close(ns.bindingsChan)

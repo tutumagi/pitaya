@@ -111,7 +111,7 @@ type (
 		state              int32                // current agent state
 
 		// 和哪个 EntityID 绑定在一起
-		ownerEntityID string
+		OwnerEntityID string
 	}
 
 	pendingMessage struct {

@@ -105,9 +105,9 @@ func doSendRPC(ctx context.Context, entityID, entityType string, serverID, route
 
 	if reply == nil {
 		// 如果没有reply 则使用 rpc send
-		return handlerService.Send(ctx, entityID, entityType, serverID, rt, reply, arg)
+		return handlerService.remote.Send(ctx, entityID, entityType, serverID, rt, reply, arg)
 	} else {
 		// 如果有reply 则使用 rpc call
-		return handlerService.RPC(ctx, entityID, entityType, serverID, rt, reply, arg)
+		return handlerService.remote.RPC(ctx, entityID, entityType, serverID, rt, reply, arg)
 	}
 }

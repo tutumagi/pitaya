@@ -202,6 +202,14 @@ func (r *Remote) CreateEntity(ctx context.Context, req *protos.SEntityData) (*pr
 	return &protos.Response{}, nil
 }
 
+// func (r *Remote) ClientConnected(ctx context.Context, req *protos.ClientConnect) (*protos.Response, error) {
+
+// 	// client := agent.NewRemote(
+// 	// 	req.Sess,
+
+// 	// )
+// }
+
 func createBaseSpaceFromRemote(req *protos.CreateBaseSpaceReq) error {
 	logger.Infof("create base space. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
 	space := CreateSpace(req.SpaceKind, req.SpaceID, req.CellServerID)

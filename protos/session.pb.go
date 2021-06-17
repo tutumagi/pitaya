@@ -25,10 +25,10 @@ type Session struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     int64  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`        // 运行时的session id
-	Uid    string `protobuf:"bytes,2,opt,name=uid,proto3" json:"uid,omitempty"`       // 玩家id，角色id是另外一个，玩家可能有多个角色
-	RoleID string `protobuf:"bytes,3,opt,name=roleID,proto3" json:"roleID,omitempty"` // 角色ID
-	Data   []byte `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+	Id       int64  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`            // 运行时的session id
+	Uid      string `protobuf:"bytes,2,opt,name=uid,proto3" json:"uid,omitempty"`           // 玩家id，角色id是另外一个，玩家可能有多个角色
+	RoleID   string `protobuf:"bytes,3,opt,name=roleID,proto3" json:"roleID,omitempty"`     // 角色ID
+	ServerID string `protobuf:"bytes,4,opt,name=serverID,proto3" json:"serverID,omitempty"` // 该连接在哪个server上
 }
 
 func (x *Session) Reset() {
@@ -84,26 +84,126 @@ func (x *Session) GetRoleID() string {
 	return ""
 }
 
-func (x *Session) GetData() []byte {
+func (x *Session) GetServerID() string {
 	if x != nil {
-		return x.Data
+		return x.ServerID
+	}
+	return ""
+}
+
+type ClientConnect struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Sess         *Session `protobuf:"bytes,1,opt,name=sess,proto3" json:"sess,omitempty"`
+	BootEntityID string   `protobuf:"bytes,2,opt,name=bootEntityID,proto3" json:"bootEntityID,omitempty"`
+}
+
+func (x *ClientConnect) Reset() {
+	*x = ClientConnect{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_session_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ClientConnect) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientConnect) ProtoMessage() {}
+
+func (x *ClientConnect) ProtoReflect() protoreflect.Message {
+	mi := &file_session_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientConnect.ProtoReflect.Descriptor instead.
+func (*ClientConnect) Descriptor() ([]byte, []int) {
+	return file_session_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ClientConnect) GetSess() *Session {
+	if x != nil {
+		return x.Sess
 	}
 	return nil
+}
+
+func (x *ClientConnect) GetBootEntityID() string {
+	if x != nil {
+		return x.BootEntityID
+	}
+	return ""
+}
+
+type ClientDisconnect struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *ClientDisconnect) Reset() {
+	*x = ClientDisconnect{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_session_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ClientDisconnect) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientDisconnect) ProtoMessage() {}
+
+func (x *ClientDisconnect) ProtoReflect() protoreflect.Message {
+	mi := &file_session_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientDisconnect.ProtoReflect.Descriptor instead.
+func (*ClientDisconnect) Descriptor() ([]byte, []int) {
+	return file_session_proto_rawDescGZIP(), []int{2}
 }
 
 var File_session_proto protoreflect.FileDescriptor
 
 var file_session_proto_rawDesc = []byte{
 	0x0a, 0x0d, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x22, 0x57, 0x0a, 0x07, 0x53, 0x65, 0x73, 0x73, 0x69,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x22, 0x5f, 0x0a, 0x07, 0x53, 0x65, 0x73, 0x73, 0x69,
 	0x6f, 0x6e, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x02,
 	0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x03, 0x75, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x6f, 0x6c, 0x65, 0x49, 0x44, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x6f, 0x6c, 0x65, 0x49, 0x44, 0x12, 0x12, 0x0a, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x42, 0x1b, 0x5a, 0x08, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0xaa, 0x02, 0x0e, 0x4e,
-	0x50, 0x69, 0x74, 0x61, 0x79, 0x61, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x6f, 0x6c, 0x65, 0x49, 0x44, 0x12, 0x1a, 0x0a, 0x08,
+	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x49, 0x44, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x49, 0x44, 0x22, 0x58, 0x0a, 0x0d, 0x43, 0x6c, 0x69, 0x65,
+	0x6e, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x12, 0x23, 0x0a, 0x04, 0x73, 0x65, 0x73,
+	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73,
+	0x2e, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x04, 0x73, 0x65, 0x73, 0x73, 0x12, 0x22,
+	0x0a, 0x0c, 0x62, 0x6f, 0x6f, 0x74, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x49, 0x44, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x62, 0x6f, 0x6f, 0x74, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79,
+	0x49, 0x44, 0x22, 0x12, 0x0a, 0x10, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x44, 0x69, 0x73, 0x63,
+	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x42, 0x1b, 0x5a, 0x08, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x73, 0xaa, 0x02, 0x0e, 0x4e, 0x50, 0x69, 0x74, 0x61, 0x79, 0x61, 0x2e, 0x50, 0x72, 0x6f,
+	0x74, 0x6f, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -118,16 +218,19 @@ func file_session_proto_rawDescGZIP() []byte {
 	return file_session_proto_rawDescData
 }
 
-var file_session_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_session_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_session_proto_goTypes = []interface{}{
-	(*Session)(nil), // 0: protos.Session
+	(*Session)(nil),          // 0: protos.Session
+	(*ClientConnect)(nil),    // 1: protos.ClientConnect
+	(*ClientDisconnect)(nil), // 2: protos.ClientDisconnect
 }
 var file_session_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: protos.ClientConnect.sess:type_name -> protos.Session
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_session_proto_init() }
@@ -148,6 +251,30 @@ func file_session_proto_init() {
 				return nil
 			}
 		}
+		file_session_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ClientConnect); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_session_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ClientDisconnect); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -155,7 +282,7 @@ func file_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_session_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

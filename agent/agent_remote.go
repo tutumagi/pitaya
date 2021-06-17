@@ -27,26 +27,26 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/tutumagi/pitaya/cluster"
-	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/conn/packet"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/serialize"
-	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/util"
 )
 
 // Remote corresponding to another server
 type Remote struct {
-	Session          *session.Session // session
-	chDie            chan struct{}    // wait for close
-	messageEncoder   message.Encoder
-	encoder          codec.PacketEncoder      // binary encoder
-	frontendID       string                   // the frontend that sent the request
-	reply            string                   // nats reply topic
+	frontSessID int64
+	uid         string
+	rid         string
+
+	chDie chan struct{} // wait for close
+	// messageEncoder message.Encoder
+	// encoder    codec.PacketEncoder // binary encoder
+	frontendID string // the frontend that sent the request
+
 	rpcClient        cluster.RPCClient        // rpc client
 	serializer       serialize.Serializer     // message serializer
 	serviceDiscovery cluster.ServiceDiscovery // service discovery
@@ -54,43 +54,41 @@ type Remote struct {
 
 // NewRemote create new Remote instance
 func NewRemote(
-	sess *protos.Session,
-	reply string,
+	frontSessID int64,
+	frontServerID string,
+	uid string,
+	rid string,
 	rpcClient cluster.RPCClient,
-	encoder codec.PacketEncoder,
+	// encoder codec.PacketEncoder,
 	serializer serialize.Serializer,
 	serviceDiscovery cluster.ServiceDiscovery,
-	frontendID string,
-	messageEncoder message.Encoder,
+	// frontendID string,
+	// messageEncoder message.Encoder,
 ) (*Remote, error) {
 	a := &Remote{
-		chDie:            make(chan struct{}),
-		reply:            reply, // TODO this is totally coupled with NATS
-		serializer:       serializer,
-		encoder:          encoder,
+		frontSessID: frontSessID,
+		frontendID:  frontServerID,
+		uid:         uid,
+		rid:         rid,
+		chDie:       make(chan struct{}),
+		serializer:  serializer,
+		// encoder:          encoder,
 		rpcClient:        rpcClient,
 		serviceDiscovery: serviceDiscovery,
-		frontendID:       frontendID,
-		messageEncoder:   messageEncoder,
+
+		// messageEncoder: messageEncoder,
 	}
-
-	// binding session
-	s := session.New(a, false, sess.GetUid())
-	s.SetRoleID(sess.GetRoleID())
-	s.SetFrontendData(frontendID, sess.GetId())
-
-	a.Session = s
 
 	return a, nil
 }
 
 // Kick kicks the user
 func (a *Remote) Kick(ctx context.Context) error {
-	if a.Session.UID() == "" {
+	if a.uid == "" {
 		return constants.ErrNoUIDBind
 	}
 	b, err := proto.Marshal(&protos.KickMsg{
-		UserId: a.Session.UID(),
+		UserId: a.uid,
 	})
 	if err != nil {
 		return err
@@ -102,16 +100,16 @@ func (a *Remote) Kick(ctx context.Context) error {
 // Push pushes the message to the user
 func (a *Remote) Push(route string, v interface{}) error {
 	if (reflect.TypeOf(a.rpcClient) == reflect.TypeOf(&cluster.NatsRPCClient{}) &&
-		a.Session.UID() == "") {
+		a.uid == "") {
 		return constants.ErrNoUIDBind
 	}
 	switch d := v.(type) {
 	case []byte:
 		logger.Log.Debugf("Type=Push, ID=%d, UID=%d, Route=%s, Data=%dbytes",
-			a.Session.ID(), a.Session.UID(), route, len(d))
+			a.frontSessID, a.uid, route, len(d))
 	default:
 		logger.Log.Debugf("Type=Push, ID=%d, UID=%d, Route=%s, Data=%+v",
-			a.Session.ID(), a.Session.UID(), route, v)
+			a.frontSessID, a.uid, route, v)
 	}
 
 	sv, err := a.serviceDiscovery.GetServer(a.frontendID)
@@ -120,31 +118,8 @@ func (a *Remote) Push(route string, v interface{}) error {
 	}
 	return a.sendPush(
 		pendingMessage{typ: message.Push, route: route, payload: v},
-		a.Session.UID(), sv,
+		a.uid, sv,
 	)
-}
-
-// ResponseMID reponds the message with mid to the user
-func (a *Remote) ResponseMID(ctx context.Context, mid uint, v interface{}, isError ...bool) error {
-	err := false
-	if len(isError) > 0 {
-		err = isError[0]
-	}
-
-	if mid <= 0 {
-		return constants.ErrSessionOnNotify
-	}
-
-	switch d := v.(type) {
-	case []byte:
-		logger.Log.Debugf("Type=Response, ID=%d, MID=%d, Data=%dbytes",
-			a.Session.ID(), mid, len(d))
-	default:
-		logger.Log.Infof("Type=Response, ID=%d, MID=%d, Data=%+v",
-			a.Session.ID(), mid, v)
-	}
-
-	return a.send(pendingMessage{ctx: ctx, typ: message.Response, mid: mid, payload: v, err: err}, a.reply)
 }
 
 // Close closes the remote
@@ -153,49 +128,49 @@ func (a *Remote) Close() error { return nil }
 // RemoteAddr returns the remote address of the user
 func (a *Remote) RemoteAddr() net.Addr { return nil }
 
-func (a *Remote) serialize(m pendingMessage) ([]byte, error) {
-	payload, err := util.SerializeOrRaw(a.serializer, m.payload)
-	if err != nil {
-		return nil, err
-	}
+// func (a *Remote) serialize(m pendingMessage) ([]byte, error) {
+// 	payload, err := util.SerializeOrRaw(a.serializer, m.payload)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// construct message and encode
-	msg := &message.Message{
-		Type:  m.typ,
-		Data:  payload,
-		Route: m.route,
-		ID:    m.mid,
-		Err:   m.err,
-	}
+// 	// construct message and encode
+// 	msg := &message.Message{
+// 		Type:  m.typ,
+// 		Data:  payload,
+// 		Route: m.route,
+// 		ID:    m.mid,
+// 		Err:   m.err,
+// 	}
 
-	em, err := a.messageEncoder.Encode(msg)
-	if err != nil {
-		return nil, err
-	}
+// 	em, err := a.messageEncoder.Encode(msg)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// packet encode
-	p, err := a.encoder.Encode(packet.Data, em)
-	if err != nil {
-		return nil, err
-	}
+// 	// packet encode
+// 	p, err := a.encoder.Encode(packet.Data, em)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return p, err
-}
+// 	return p, err
+// }
 
-func (a *Remote) send(m pendingMessage, to string) (err error) {
-	p, err := a.serialize(m)
-	if err != nil {
-		return err
-	}
-	res := &protos.Response{
-		Data: p,
-	}
-	bt, err := proto.Marshal(res)
-	if err != nil {
-		return err
-	}
-	return a.rpcClient.Send(to, bt)
-}
+// func (a *Remote) send(m pendingMessage, to string) (err error) {
+// 	p, err := a.serialize(m)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	res := &protos.Response{
+// 		Data: p,
+// 	}
+// 	bt, err := proto.Marshal(res)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return a.rpcClient.Send(to, bt)
+// }
 
 func (a *Remote) sendPush(m pendingMessage, userID string, sv *cluster.Server) (err error) {
 	payload, err := util.SerializeOrRaw(a.serializer, m.payload)
@@ -204,7 +179,7 @@ func (a *Remote) sendPush(m pendingMessage, userID string, sv *cluster.Server) (
 	}
 	push := &protos.Push{
 		Route: m.route,
-		Uid:   a.Session.UID(),
+		Uid:   a.uid,
 		Data:  payload,
 	}
 	return a.rpcClient.SendPush(userID, sv, push)
