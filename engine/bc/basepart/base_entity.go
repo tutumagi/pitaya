@@ -12,8 +12,8 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 
 	"github.com/tutumagi/pitaya/agent"
-	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/dbmgr"
 	"github.com/tutumagi/pitaya/engine/math32"
@@ -217,7 +217,7 @@ func (e *Entity) AttrChangedFromBytes(attrBytes map[string][]byte) {
 
 // IsSpaceEntity 此实体是否是空间
 func (e *Entity) IsSpaceEntity() bool {
-	return strings.Contains(e.typeDesc.TypName(), consts.SpaceEntityType)
+	return strings.Contains(e.typeDesc.TypName(), common.SpaceEntityType)
 }
 
 // AsSpace 类型转换为space
@@ -258,8 +258,9 @@ func (e *Entity) attrChanged() {
 			Attrs: changeKeyBytes,
 		}
 
-		erro := app.SendTo(context.TODO(), e.ID,
-			e.TypName(), e.SpaceServerID(), "cellremote.updateattr", req)
+		// erro := app.SendTo(context.TODO(), e.ID,
+		// 	e.TypName(), e.SpaceServerID(), "cellremote.updateattr", req)
+		erro := caller.SendServiceTo(context.TODO(), e.SpaceServerID(), "cellremote", "cellremote.updateattr", req)
 		if erro != nil {
 			logger.Warn("send to cellapp update attr err", zap.String("entity", e.String()), zap.Error(erro))
 		}
@@ -405,16 +406,25 @@ func (e *Entity) NotifyCellMove(pos *math32.Vector3, yaw float32) {
 		},
 		Yaw: yaw,
 	}
-	if err := app.SendTo(
+	if err := caller.SendServiceTo(
 		context.TODO(),
-		e.ID,
-		e.TypName(),
 		spaceServerID,
+		"spaceremote",
 		"cellapp.spaceremote.syncpos",
 		msg,
 	); err != nil {
 		logger.Errorf("e:%s syncpos rpc error %s", e.String(), err)
 	}
+	// if err := app.SendTo(
+	// 	context.TODO(),
+	// 	e.ID,
+	// 	e.TypName(),
+	// 	spaceServerID,
+	// 	"cellapp.spaceremote.syncpos",
+	// 	msg,
+	// ); err != nil {
+	// 	logger.Errorf("e:%s syncpos rpc error %s", e.String(), err)
+	// }
 }
 
 // IsUseAOI 该实体是否开启AOI
@@ -578,11 +588,10 @@ func (e *Entity) Destroy(reason ...int32) {
 
 	// 如果是在 base server destroy，通知对应的space 玩家离开了
 	if e.SpaceCreated() {
-		if erre := app.SendTo(
+		if erre := caller.SendServiceTo(
 			context.Background(),
-			e.ID,
-			e.TypName(),
 			e.SpaceServerID(),
+			"cellremote",
 			"cellremote.destroyentity",
 			&protos.Entity{
 				Id:     e.ID,
@@ -592,6 +601,20 @@ func (e *Entity) Destroy(reason ...int32) {
 		); erre != nil {
 			logger.Error("leave rpc error", zap.Error(erre))
 		}
+		// if erre := app.SendTo(
+		// 	context.Background(),
+		// 	e.ID,
+		// 	e.TypName(),
+		// 	e.SpaceServerID(),
+		// 	"cellremote.destroyentity",
+		// 	&protos.Entity{
+		// 		Id:     e.ID,
+		// 		Label:  e.TypName(),
+		// 		Reason: e.destroyReason,
+		// 	},
+		// ); erre != nil {
+		// 	logger.Error("leave rpc error", zap.Error(erre))
+		// }
 	}
 
 }
@@ -753,11 +776,21 @@ func (e *Entity) LeaveSpace() error {
 
 	// 如果当前server 不是 空间相关的server
 	// 请求离开场景
-	err := app.RPCTo(
-		context.Background(),
-		e.ID,
-		e.TypName(),
+	// err := app.RPCTo(
+	// 	context.Background(),
+	// 	e.ID,
+	// 	e.TypName(),
+	// 	e.SpaceServerID(),
+	// 	"cellapp.cellremote.leavespace",
+	// 	&protos.Response{},
+	// 	&protos.Entity{
+	// 		Id:    e.ID,
+	// 		Label: e.TypName(),
+	// 	})
+	err := caller.CallServiceTo(
+		context.TODO(),
 		e.SpaceServerID(),
+		"cellremote",
 		"cellapp.cellremote.leavespace",
 		&protos.Response{},
 		&protos.Entity{
@@ -774,7 +807,7 @@ func (e *Entity) LeaveSpace() error {
 
 func (e *Entity) isEnteringSpace() bool {
 	now := time.Now().UnixNano()
-	return now < (e.enteringSpaceRequest.Time + int64(consts.EnterSpaceRequestTimeout))
+	return now < (e.enteringSpaceRequest.Time + int64(common.EnterSpaceRequestTimeout))
 }
 
 func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Vector3, viewLayer int32) {
@@ -789,8 +822,14 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	e.enteringSpaceRequest.ViewLayer = viewLayer
 
 	// 请求进入场景
-	err := app.Send(context.Background(), e.ID,
-		e.TypName(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+	// err := app.Send(context.Background(), e.ID,
+	// 	e.TypName(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+	err := caller.SendService(
+		context.Background(),
+		"spaceservice",
+		"cellmgrapp.spaceservice.enterspace",
+		e.enteringSpaceRequest,
+	)
 	if err != nil {
 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
 		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)
@@ -828,9 +867,16 @@ func (e *Entity) migrateToSpaceFromBase(spaceID string, spaceKind int32, pos mat
 		ViewLayer: viewLayer,
 	}
 	// 通知指定的的cellapp 进行进入场景操作
-	err := app.SendTo(context.Background(), e.ID,
-		e.TypName(),
-		spaceServerID,
+	// err := app.SendTo(context.Background(), e.ID,
+	// 	e.TypName(),
+	// 	spaceServerID,
+	// 	"cellremote.enterspacefrombase",
+	// 	req,
+	// )
+	err := caller.SendServiceTo(
+		context.TODO(),
+		e.SpaceServerID(),
+		"cellremote",
 		"cellremote.enterspacefrombase",
 		req,
 	)

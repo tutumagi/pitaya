@@ -1,4 +1,4 @@
-package basepart
+package cellpart
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -7,7 +7,7 @@ import (
 	"github.com/tutumagi/pitaya/serialize"
 )
 
-var baseEntManager *_BaseEntityManager
+var cellEntManager *_CellEntityManager
 var msgProcessor *metapart.EntityMsgProcessor
 var caller metapart.Caller
 
@@ -17,7 +17,7 @@ func Init(
 	remoteService *common.RemoteService,
 	caller metapart.Caller,
 ) {
-	baseEntManager = newBaseEntityManager(rootSystem)
+	cellEntManager = newCellEntityManager(rootSystem)
 
 	msgProcessor = metapart.NewEntityProcessor(
 		serializer,

@@ -12,8 +12,8 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/tutumagi/pitaya/engine/aoi"
-	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	err "github.com/tutumagi/pitaya/errors"
@@ -133,7 +133,7 @@ func (e *Entity) SetBaseServerID(id string) {
 
 func (e *Entity) isEnteringSpace() bool {
 	now := time.Now().UnixNano()
-	return now < (e.enteringSpaceRequest.Time + int64(consts.EnterSpaceRequestTimeout))
+	return now < (e.enteringSpaceRequest.Time + int64(common.EnterSpaceRequestTimeout))
 }
 
 // PrepareEnterSpace 实体准备进入场景
@@ -183,7 +183,8 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	e.enteringSpaceRequest.ViewLayer = viewLayer
 
 	// 请求进入场景
-	err := app.Send(context.Background(), "", "", "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+	err := caller.SendService(context.TODO(), "spaceservice", "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+	// err := app.Send(context.Background(), "", "", "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
 	if err != nil {
 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
 		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)
@@ -466,7 +467,7 @@ func (e *Entity) TypName() string {
 
 // IsSpaceEntity 此实体是否是空间
 func (e *Entity) IsSpaceEntity() bool {
-	return strings.Contains(e.typeDesc.TypName(), consts.SpaceEntityType)
+	return strings.Contains(e.typeDesc.TypName(), common.SpaceEntityType)
 }
 
 // AsSpace 类型转换为space

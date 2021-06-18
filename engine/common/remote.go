@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/golang/protobuf/proto"
@@ -12,7 +11,6 @@ import (
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
-	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
@@ -25,6 +23,10 @@ import (
 	"github.com/tutumagi/pitaya/tracing"
 	"github.com/tutumagi/pitaya/util"
 )
+
+type RemoteRequestProcessor interface {
+	Process(ctx context.Context, req *protos.Request) *protos.Response
+}
 
 // 用来处理rpc send/call 和 rpc process
 type RemoteService struct {
@@ -44,8 +46,8 @@ type RemoteService struct {
 	router                 *router.Router
 	remoteBindingListeners []cluster.RemoteBindingListener
 
-	entityManager EntityManager
-	actorSystem   *actor.ActorSystem
+	remoteRequestProcessor RemoteRequestProcessor
+	actorSystem            *actor.ActorSystem
 }
 
 var _ protos.PitayaServer = &RemoteService{}
@@ -62,6 +64,7 @@ func NewRemoteService(
 	router *router.Router,
 
 	system *actor.ActorSystem,
+	remoteRequestProcessor RemoteRequestProcessor,
 ) *RemoteService {
 
 	p := &RemoteService{
@@ -76,7 +79,8 @@ func NewRemoteService(
 		router:                 router,
 		remoteBindingListeners: make([]cluster.RemoteBindingListener, 0),
 
-		actorSystem: system,
+		remoteRequestProcessor: remoteRequestProcessor,
+		actorSystem:            system,
 	}
 
 	return p
@@ -125,120 +129,6 @@ func (p *RemoteService) dispatch(thread int) {
 			timer.RemoveTimer(id)
 		}
 	}
-}
-
-func (p *RemoteService) CallEntityFromLocal(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	reply proto.Message,
-	arg proto.Message,
-) error {
-	return p.localCall(ctx, entityID, entityType, routeStr, reply, arg, 0)
-	// rt, err := route.Decode(router)
-	// if err != nil {
-	// 	// logger.Errorf("cannot decode route:%s err:%s", router, err)
-	// 	return err
-	// }
-
-	// typName, err := p.entityManager.GetTypName(entityID)
-	// if err != nil {
-	// 	logger.Warnf("找不到该实体的类型 id:%s err:%s", entityID, err)
-	// 	return err
-	// }
-	// routers := rtManager.getRoute(typName)
-
-	// h, err := routers.getHandler(rt)
-	// if err != nil {
-	// 	return e.NewError(err, e.ErrNotFoundCode)
-	// }
-
-	// processHandlerMessage(nil, rt, h, p.remoteService.serializer)
-	return nil
-}
-
-func (p *RemoteService) localCall(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message, mid int) error {
-	var ret interface{}
-	var err error
-
-	entity := p.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		// return &protos.Response{
-		// 	Error: &protos.Error{
-		// 		Code: e.ErrUnknownCode,
-		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-		// 	},
-		// }
-		err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
-		return err
-	}
-
-	// TODO 本地 call 这里marshal了一次，到实际call方法时，又unmarshal一次，重复了
-	argBytes, _ := p.serializer.Marshal(arg)
-
-	ret, err = p.actorSystem.Root.RequestFuture(
-		p.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: &protos.Request{
-				Type: protos.RPCType_User,
-				Msg: &protos.MsgV2{
-					Id:    uint64(mid),
-					Route: routeStr,
-					Data:  argBytes,
-					// Type:  protos.MsgType(msg.Type),
-					Eid: entityID,
-					Typ: entityType,
-					// Reply: ,
-				},
-			},
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return err
-	}
-	if reply != nil {
-		err := p.serializer.Unmarshal(ret.([]byte), reply)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
-	// ret, err := processHandlerMessage(
-	// 	ctx,
-	// 	route,
-	// 	p.serializer,
-	// 	a.Session,
-	// 	msg.EntityID,
-	// 	msg.EntityType,
-	// 	p,
-	// 	msg.Data,
-	// 	msg.Type,
-	// 	false,
-	// )
-	// if msg.Type != message.Notify {
-	// 	if err != nil {
-	// 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
-	// 		a.AnswerWithError(ctx, mid, err)
-	// 	} else {
-	// 		err := a.Session.ResponseMID(ctx, mid, ret)
-	// 		if err != nil {
-	// 			tracing.FinishSpan(ctx, err)
-	// 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
-	// 		}
-	// 	}
-	// } else {
-	// 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
-	// 	tracing.FinishSpan(ctx, err)
-	// }
 }
 
 // region remote
@@ -321,7 +211,7 @@ func (r *RemoteService) remoteCall(
 }
 
 // Send makes sends
-func (r *RemoteService) Send(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, reply proto.Message, arg proto.Message) error {
+func (r *RemoteService) Send(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, arg proto.Message) error {
 	var data []byte
 	var err error
 	if arg != nil {
@@ -417,6 +307,9 @@ func (r *RemoteService) RemoteProcess(
 // pitaya server imp
 // Call processes a remote call
 func (r *RemoteService) Call(ctx context.Context, req *protos.Request) (*protos.Response, error) {
+	if r.remoteRequestProcessor == nil {
+		return nil, fmt.Errorf("no remoteRequestProcessor implement")
+	}
 	c, err := util.GetContextFromRequest(req, r.server.ID)
 	c = util.StartSpanFromRequest(c, r.server.ID, req.GetMsg().GetRoute())
 	var res *protos.Response
@@ -430,7 +323,7 @@ func (r *RemoteService) Call(ctx context.Context, req *protos.Request) (*protos.
 	} else {
 		// res = r.processRemoteMessage(c, req)
 
-		res = r.processRemoteMessage2Entity(c, req)
+		res = r.remoteRequestProcessor.Process(c, req)
 	}
 
 	if res.Error != nil {
@@ -489,50 +382,4 @@ func (r *RemoteService) KickUser(ctx context.Context, kick *protos.KickMsg) (*pr
 // AddRemoteBindingListener adds a listener
 func (r *RemoteService) AddRemoteBindingListener(bindingListener cluster.RemoteBindingListener) {
 	r.remoteBindingListeners = append(r.remoteBindingListeners, bindingListener)
-}
-
-func (r *RemoteService) processRemoteMessage2Entity(ctx context.Context, req *protos.Request) *protos.Response {
-	entityID := req.Msg.Eid
-	entityType := req.Msg.Typ
-	entity := r.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-			},
-		}
-	}
-
-	rsp, err := r.actorSystem.Root.RequestFuture(
-		r.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: req,
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("actor.proto requestFuture error:%s", err),
-			},
-		}
-	} else {
-		if rspp, ok := rsp.(*protos.Response); ok {
-			return rspp
-		} else {
-			return &protos.Response{
-				Error: &protos.Error{
-					Code: e.ErrUnknownCode,
-					Msg:  "rsp type is not *protos.Response",
-				},
-			}
-		}
-	}
 }

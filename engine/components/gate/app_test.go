@@ -54,14 +54,12 @@ import (
 
 var (
 	tables = []struct {
-		isFrontend     bool
 		serverType     string
-		serverMode     ServerMode
 		serverMetadata map[string]string
 		cfg            *viper.Viper
 	}{
-		{true, "sv1", Cluster, map[string]string{"name": "bla"}, viper.New()},
-		{false, "sv2", Standalone, map[string]string{}, viper.New()},
+		{"sv1", map[string]string{"name": "bla"}, viper.New()},
+		{"sv2", map[string]string{}, viper.New()},
 	}
 	typeOfetcdSD        reflect.Type
 	typeOfNatsRPCServer reflect.Type
@@ -76,7 +74,7 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 
 	etcdSD, err := cluster.NewEtcdServiceDiscovery(app.config, app.server, app.dieChan)
 	if err != nil {
@@ -119,7 +117,6 @@ func initApp() {
 		acceptors:     []acceptor.Acceptor{},
 		packetDecoder: codec.NewPomeloPacketDecoder(),
 		packetEncoder: codec.NewPomeloPacketEncoder(),
-		serverMode:    Standalone,
 		serializer:    json.NewSerializer(),
 		configured:    false,
 		running:       false,
@@ -131,10 +128,9 @@ func TestConfigure(t *testing.T) {
 	for _, table := range tables {
 		t.Run(table.serverType, func(t *testing.T) {
 			initApp()
-			Configure(table.isFrontend, table.serverType, table.serverMode, table.serverMetadata, table.cfg)
-			assert.Equal(t, table.isFrontend, app.server.Frontend)
+			Configure(table.serverType, table.serverMetadata, table.cfg)
+			assert.Equal(t, true, app.server.Frontend)
 			assert.Equal(t, table.serverType, app.server.Type)
-			assert.Equal(t, table.serverMode, app.serverMode)
 			assert.Equal(t, table.serverMetadata, app.server.Metadata)
 			assert.Equal(t, true, app.configured)
 		})
@@ -146,13 +142,9 @@ func TestAddAcceptor(t *testing.T) {
 	for _, table := range tables {
 		t.Run(table.serverType, func(t *testing.T) {
 			initApp()
-			Configure(table.isFrontend, table.serverType, table.serverMode, table.serverMetadata, table.cfg)
+			Configure(table.serverType, table.serverMetadata, table.cfg)
 			AddAcceptor(acc)
-			if table.isFrontend {
-				assert.Equal(t, acc, app.acceptors[0])
-			} else {
-				assert.Equal(t, 0, len(app.acceptors))
-			}
+			assert.Equal(t, acc, app.acceptors[0])
 		})
 	}
 }
@@ -228,7 +220,7 @@ func TestSetHeartbeatInterval(t *testing.T) {
 
 func TestSetRPCServer(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	r, err := cluster.NewNatsRPCServer(app.config, app.server, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -239,7 +231,7 @@ func TestSetRPCServer(t *testing.T) {
 
 func TestSetRPCClient(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	r, err := cluster.NewNatsRPCClient(app.config, app.server, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -249,7 +241,7 @@ func TestSetRPCClient(t *testing.T) {
 
 func TestSetServiceDiscovery(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	r, err := cluster.NewEtcdServiceDiscovery(app.config, app.server, app.dieChan)
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
@@ -259,7 +251,7 @@ func TestSetServiceDiscovery(t *testing.T) {
 
 func TestAddMetricsReporter(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	r, err := metrics.NewStatsdReporter(app.config, app.server.Type, map[string]string{
 		"tag1": "value1",
 	})
@@ -271,7 +263,7 @@ func TestAddMetricsReporter(t *testing.T) {
 
 func TestSetSerializer(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	r := json.NewSerializer()
 	assert.NotNil(t, r)
 	SetSerializer(r)
@@ -280,14 +272,14 @@ func TestSetSerializer(t *testing.T) {
 
 // func TestInitSysRemotes(t *testing.T) {
 // 	initApp()
-// 	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+// 	Configure("testtype", map[string]string{}, viper.New())
 // 	initSysRemotes()
 // 	assert.NotNil(t, remoteComp[0])
 // }
 
 func TestSetDictionary(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 
 	dict := map[string]uint16{"someroute": 12}
 	err := SetDictionary(dict)
@@ -301,7 +293,7 @@ func TestSetDictionary(t *testing.T) {
 
 func TestAddRoute(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	app.router = nil
 	err := AddRoute("somesv", func(ctx context.Context, route *route.Route, payload []byte, servers map[string]*cluster.Server) (*cluster.Server, error) {
 		return nil, nil
@@ -343,7 +335,7 @@ func TestConfigureDefaultMetricsReporter(t *testing.T) {
 			cfg := viper.New()
 			cfg.Set("pitaya.metrics.prometheus.enabled", table.enabled)
 			cfg.Set("pitaya.metrics.statsd.enabled", table.enabled)
-			Configure(true, "testtype", Cluster, map[string]string{}, cfg)
+			Configure("testtype", map[string]string{}, cfg)
 			// if statsd is enabled there are 2 metricsReporters, prometheus and statsd
 			assert.Equal(t, table.enabled, len(app.metricsReporters) == 2)
 		})
@@ -352,7 +344,7 @@ func TestConfigureDefaultMetricsReporter(t *testing.T) {
 
 func TestStartDefaultSD(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	startDefaultSD()
 	assert.NotNil(t, app.serviceDiscovery)
 	assert.Equal(t, typeOfetcdSD, reflect.TypeOf(app.serviceDiscovery))
@@ -360,7 +352,7 @@ func TestStartDefaultSD(t *testing.T) {
 
 func TestStartDefaultRPCServer(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	startDefaultRPCServer()
 	assert.NotNil(t, app.rpcServer)
 	assert.Equal(t, typeOfNatsRPCServer, reflect.TypeOf(app.rpcServer))
@@ -368,7 +360,7 @@ func TestStartDefaultRPCServer(t *testing.T) {
 
 func TestStartDefaultRPCClient(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 	startDefaultRPCClient()
 	assert.NotNil(t, app.rpcClient)
 	assert.Equal(t, typeOfNatsRPCClient, reflect.TypeOf(app.rpcClient))
@@ -376,7 +368,7 @@ func TestStartDefaultRPCClient(t *testing.T) {
 
 func TestStartAndListenStandalone(t *testing.T) {
 	initApp()
-	Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
+	Configure("testtype", map[string]string{}, viper.New())
 
 	acc := acceptor.NewTCPAcceptor("127.0.0.1:0")
 	AddAcceptor(acc)
@@ -415,7 +407,7 @@ func TestStartAndListenCluster(t *testing.T) {
 	cfg.Set("pitaya.cluster.rpc.server.nats.connect", fmt.Sprintf("nats://%s", nsAddr))
 
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, cfg)
+	Configure("testtype", map[string]string{}, cfg)
 
 	etcdSD, err := cluster.NewEtcdServiceDiscovery(app.config, app.server, app.dieChan, cli)
 	assert.NoError(t, err)
@@ -675,7 +667,7 @@ func TestAddGRPCInfoToMetadata(t *testing.T) {
 func TestStartWorker(t *testing.T) {
 	cfg := viper.New()
 	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, cfg)
+	Configure("testtype", map[string]string{}, cfg)
 
 	err := StartWorker(GetConfig())
 	assert.NoError(t, err)
@@ -686,7 +678,7 @@ func TestRegisterRPCJob(t *testing.T) {
 	t.Run("register_once", func(t *testing.T) {
 		cfg := viper.New()
 		initApp()
-		Configure(true, "testtype", Cluster, map[string]string{}, cfg)
+		Configure("testtype", map[string]string{}, cfg)
 		err := StartWorker(GetConfig())
 		assert.NoError(t, err)
 
@@ -697,7 +689,7 @@ func TestRegisterRPCJob(t *testing.T) {
 	t.Run("register_twice", func(t *testing.T) {
 		cfg := viper.New()
 		initApp()
-		Configure(true, "testtype", Cluster, map[string]string{}, cfg)
+		Configure("testtype", map[string]string{}, cfg)
 		err := StartWorker(GetConfig())
 		assert.NoError(t, err)
 

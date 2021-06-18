@@ -5,8 +5,8 @@ import (
 
 	"github.com/tutumagi/pitaya/engine/bc/basepart"
 	"github.com/tutumagi/pitaya/engine/bc/cellpart"
-	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 	"go.uber.org/zap"
 )
@@ -82,11 +82,11 @@ func RegisterSpace(kind int32, spacePtrBase basepart.ISpace, spacePtrCell cellpa
 		spacePtrCell = &emptyCellSpace{}
 	}
 
-	return RegisterEntity(consts.SpaceTypeName(kind), spacePtrBase, spacePtrCell, false)
+	return RegisterEntity(common.SpaceTypeName(kind), spacePtrBase, spacePtrCell, false)
 }
 
 func RegisterService(typName string, entityPtr basepart.IBaseEntity) *metapart.TypeDesc {
-	return RegisterEntity(consts.ServiceTypeName(typName), entityPtr, nil, false)
+	return RegisterEntity(common.ServiceTypeName(typName), entityPtr, nil, false)
 }
 
 // 生成一个实体ID

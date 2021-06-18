@@ -60,6 +60,10 @@ rm-test-temp-files:
 	@rm -f cluster/localhost* localhost*
 	@rm -f ./*/127.0.0.1*
 	@rm -f ./*/localhost*
+	@rm -f ./*/*/127.0.0.1*
+	@rm -f ./*/*/localhost*
+	@rm -f ./*/*/*/127.0.0.1*
+	@rm -f ./*/*/*/localhost*
 
 ensure-testing-bin:
 	@[ -f ./examples/testing/server ] || go build -o ./examples/testing/server ./examples/testing/main.go

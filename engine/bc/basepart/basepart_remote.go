@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
-	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	"github.com/tutumagi/pitaya/logger"
 
@@ -102,10 +101,22 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 			sp.initCellServerID = req.CellServerID
 		}
 
-		err := app.SendTo(context.TODO(),
-			"",
-			"",
+		// err := app.SendTo(context.TODO(),
+		// 	"",
+		// 	"",
+		// 	req.CellServerID,
+		// 	"cellremote.createcellspace",
+		// 	&protos.CreateCellSpaceReq{
+		// 		SpaceKind:    req.SpaceKind,
+		// 		SpaceID:      req.SpaceID,
+		// 		BaseServerID: curServerID(),
+		// 		Extra:        map[string]string{},
+		// 	},
+		// )
+		err := caller.SendServiceTo(
+			context.TODO(),
 			req.CellServerID,
+			"cellremote",
 			"cellremote.createcellspace",
 			&protos.CreateCellSpaceReq{
 				SpaceKind:    req.SpaceKind,
@@ -120,9 +131,21 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 		}
 
 		// 通知 cellappmgr 场景已存在
-		err = app.Send(context.TODO(),
-			"",
-			"",
+		// err = app.Send(context.TODO(),
+		// 	"",
+		// 	"",
+		// 	"cellmgrapp.spaceservice.docreatespaceifneednotify",
+		// 	&protos.CreateSpaceIfNeedNotify{
+		// 		SpaceKind:       sp.kind,
+		// 		SpaceID:         sp.ID,
+		// 		BaseServerID:    curServerID(),
+		// 		CellServerID:    sp.initCellServerID,
+		// 		MasterSpaceFlag: 1,
+		// 	},
+		// )
+		err = caller.SendService(
+			context.TODO(),
+			"spaceservice",
 			"cellmgrapp.spaceservice.docreatespaceifneednotify",
 			&protos.CreateSpaceIfNeedNotify{
 				SpaceKind:       sp.kind,
@@ -225,10 +248,22 @@ func createBaseSpaceFromRemote(req *protos.CreateBaseSpaceReq) error {
 	}
 
 	logger.Infof("create cell space. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
-	err := app.SendTo(context.TODO(),
-		"",
-		"",
+	// err := app.SendTo(context.TODO(),
+	// 	"",
+	// 	"",
+	// 	req.CellServerID,
+	// 	"cellremote.createcellspace",
+	// 	&protos.CreateCellSpaceReq{
+	// 		SpaceKind:    req.SpaceKind,
+	// 		SpaceID:      req.SpaceID,
+	// 		BaseServerID: curServerID(),
+	// 		Extra:        req.Extra,
+	// 	},
+	// )
+	err := caller.SendServiceTo(
+		context.TODO(),
 		req.CellServerID,
+		"cellremote",
 		"cellremote.createcellspace",
 		&protos.CreateCellSpaceReq{
 			SpaceKind:    req.SpaceKind,

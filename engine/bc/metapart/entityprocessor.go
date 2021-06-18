@@ -26,46 +26,26 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/tutumagi/pitaya/cluster"
-	"github.com/tutumagi/pitaya/conn/codec"
-	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/route"
-	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/util"
 )
 
 // EntityMsgProcessor struct
 type EntityMsgProcessor struct {
-	serviceDiscovery cluster.ServiceDiscovery
-	serializer       serialize.Serializer
-	encoder          codec.PacketEncoder
-	rpcClient        cluster.RPCClient
-
-	router         *router.Router
-	messageEncoder message.Encoder
+	serializer serialize.Serializer
 }
 
 // NewEntityProcessor creates and return a new RemoteService
 func NewEntityProcessor(
-	serviceDiscovery cluster.ServiceDiscovery,
 	serializer serialize.Serializer,
-	encoder codec.PacketEncoder,
-	rpcClient cluster.RPCClient,
-	router *router.Router,
-	messageEncoder message.Encoder,
 ) *EntityMsgProcessor {
 	return &EntityMsgProcessor{
-		serviceDiscovery: serviceDiscovery,
-		serializer:       serializer,
-		encoder:          encoder,
-		rpcClient:        rpcClient,
-		router:           router,
-		messageEncoder:   messageEncoder,
+		serializer: serializer,
 	}
 }
 

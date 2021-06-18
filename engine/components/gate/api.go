@@ -26,10 +26,6 @@ import (
 
 // AddAcceptor adds a new acceptor to app
 func AddAcceptor(ac acceptor.Acceptor) {
-	if !app.server.Frontend {
-		logger.Log.Error("tried to add an acceptor to a backend server, skipping")
-		return
-	}
 	app.acceptors = append(app.acceptors, ac)
 }
 

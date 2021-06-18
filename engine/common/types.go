@@ -1,7 +1,10 @@
 package common
 
 import (
+	"context"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/tutumagi/pitaya/protos"
 )
 
 const HandlerType = "handler"
@@ -13,4 +16,10 @@ type EntityManager interface {
 	GetEntityVal(id string, typName string) interface{}
 	// 获取实体绑定的pid
 	GetEntityPid(id string, typName string) *actor.PID
+}
+
+// call给实际实体的参数类型
+type LocalMessageWrapper struct {
+	Ctx context.Context
+	Req *protos.Request
 }

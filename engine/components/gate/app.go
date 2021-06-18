@@ -49,17 +49,6 @@ import (
 	"github.com/tutumagi/pitaya/worker"
 )
 
-// ServerMode represents a server mode
-type ServerMode byte
-
-const (
-	_ ServerMode = iota
-	// Cluster represents a server running with connection to other servers
-	Cluster
-	// Standalone represents a server running without connection to other servers
-	Standalone
-)
-
 // App is the base app struct
 type App struct {
 	acceptors        []acceptor.Acceptor
@@ -79,7 +68,7 @@ type App struct {
 	running          bool
 	serializer       serialize.Serializer
 	server           *cluster.Server
-	serverMode       ServerMode
+
 	serviceDiscovery cluster.ServiceDiscovery
 	startAt          time.Time
 	worker           *worker.Worker
@@ -121,7 +110,6 @@ var (
 		packetDecoder:    codec.NewPomeloPacketDecoder(),
 		packetEncoder:    codec.NewPomeloPacketEncoder(),
 		metricsReporters: make([]metrics.Reporter, 0),
-		serverMode:       Standalone,
 		serializer:       json.NewSerializer(),
 		configured:       false,
 		running:          false,
@@ -134,9 +122,7 @@ var (
 
 // Configure configures the app
 func Configure(
-	isFrontend bool,
 	serverType string,
-	serverMode ServerMode,
 	serverMetadata map[string]string,
 	cfgs ...*viper.Viper,
 ) {
@@ -152,9 +138,9 @@ func Configure(
 		app.heartbeat/time.Second,
 		2*app.heartbeat/time.Second)
 
-	app.server.Frontend = isFrontend
+	app.server.Frontend = true
 	app.server.Type = serverType
-	app.serverMode = serverMode
+
 	app.server.Metadata = serverMetadata
 	app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
 	configureMetrics(serverType)
@@ -393,7 +379,7 @@ func listen() {
 		logger.Log.Infof("listening with acceptor %s on addr %s", reflect.TypeOf(a), a.GetAddr())
 	}
 
-	if app.serverMode == Cluster && app.server.Frontend && app.config.GetBool("pitaya.session.unique") {
+	if app.server.Frontend && app.config.GetBool("pitaya.session.unique") {
 		unique := mods.NewUniqueSession(app.server, app.rpcServer, app.rpcClient)
 		handlerService.remote.AddRemoteBindingListener(unique)
 		common.RegisterModule(unique, "uniqueSession")
@@ -404,8 +390,4 @@ func listen() {
 	logger.Log.Info("all modules started!")
 
 	app.running = true
-}
-
-func isCluster() bool {
-	return app.serverMode == Cluster
 }

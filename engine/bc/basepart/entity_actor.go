@@ -2,7 +2,7 @@ package basepart
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 )
 
@@ -35,7 +35,7 @@ func (e *Entity) Receive(ctx actor.Context) {
 		e.I.OnClientDisconnected()
 	case *clientConnect:
 		e.I.OnClientConnected()
-	case *metapart.LocalMessageWrapper:
+	case *common.LocalMessageWrapper:
 		// 开始处理业务逻辑消息
 		ret := msgProcessor.ProcessMessage(msg.Ctx, msg.Req, e, e.typeDesc.Routers)
 		if ret != nil {

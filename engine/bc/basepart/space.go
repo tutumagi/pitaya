@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"gitlab.gamesword.com/nut/dreamcity/game/define"
@@ -379,9 +378,20 @@ func (s *Space) cellPartCreated() error {
 		return err
 	}
 	// 在 baseapp 时，通知 cellappmgr 场景创建成功了
-	err = app.Send(context.TODO(),
-		"",
-		"",
+	// err = app.Send(context.TODO(),
+	// 	"",
+	// 	"",
+	// 	"cellmgrapp.spaceservice.spaceloaded",
+	// 	&protos.SpaceLoadedNotify{
+	// 		SpaceKind:    s.kind,
+	// 		SpaceID:      s.ID,
+	// 		BaseServerID: curServerID(),
+	// 		CellServerID: s.initCellServerID,
+	// 	},
+	// )
+	err = caller.SendService(
+		context.TODO(),
+		"spaceservice",
 		"cellmgrapp.spaceservice.spaceloaded",
 		&protos.SpaceLoadedNotify{
 			SpaceKind:    s.kind,

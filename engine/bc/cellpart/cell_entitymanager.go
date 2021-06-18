@@ -3,6 +3,7 @@ package cellpart
 import (
 	"reflect"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/logger"
 	"gitlab.gamesword.com/nut/entitygen/attr"
@@ -11,9 +12,11 @@ import (
 
 type _CellEntityManager struct {
 	entitiesByType map[string]CellMap
+
+	system *actor.ActorSystem
 }
 
-func newCellEntityManager() *_CellEntityManager {
+func newCellEntityManager(system *actor.ActorSystem) *_CellEntityManager {
 	return &_CellEntityManager{
 		entitiesByType: map[string]CellMap{},
 	}
@@ -62,8 +65,6 @@ func (em *_CellEntityManager) foreach(fn func(*Entity) bool) {
 
 exit:
 }
-
-var cellEntManager = newCellEntityManager()
 
 // GetEntity get entity
 func GetEntity(typName string, id string) *Entity {

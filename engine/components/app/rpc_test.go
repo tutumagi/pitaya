@@ -20,76 +20,76 @@
 
 package app
 
-import (
-	"context"
-	"testing"
+// import (
+// 	"context"
+// 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-	"github.com/tutumagi/pitaya/cluster"
-	clustermocks "github.com/tutumagi/pitaya/cluster/mocks"
-	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/constants"
-	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/protos/test"
-	"github.com/tutumagi/pitaya/route"
-	"github.com/tutumagi/pitaya/router"
-	serializemocks "github.com/tutumagi/pitaya/serialize/mocks"
-)
+// 	"github.com/golang/mock/gomock"
+// 	"github.com/golang/protobuf/proto"
+// 	"github.com/stretchr/testify/assert"
+// 	"github.com/tutumagi/pitaya/cluster"
+// 	clustermocks "github.com/tutumagi/pitaya/cluster/mocks"
+// 	"github.com/tutumagi/pitaya/conn/message"
+// 	"github.com/tutumagi/pitaya/constants"
+// 	"github.com/tutumagi/pitaya/protos"
+// 	"github.com/tutumagi/pitaya/protos/test"
+// 	"github.com/tutumagi/pitaya/route"
+// 	"github.com/tutumagi/pitaya/router"
+// 	serializemocks "github.com/tutumagi/pitaya/serialize/mocks"
+// )
 
-func TestDoSendRPCNotInitialized(t *testing.T) {
-	err := doSendRPC(nil, "", "", "", "", nil, nil)
-	assert.Equal(t, constants.ErrRPCServerNotInitialized, err)
-}
+// func TestDoSendRPCNotInitialized(t *testing.T) {
+// 	err := doSendRPC(nil, "", "", "", "", nil, nil)
+// 	assert.Equal(t, constants.ErrRPCServerNotInitialized, err)
+// }
 
-func TestDoSendRPC(t *testing.T) {
-	app.server.ID = "myserver"
-	app.rpcServer = &cluster.NatsRPCServer{}
-	tables := []struct {
-		name     string
-		routeStr string
-		reply    proto.Message
-		arg      proto.Message
-		err      error
-	}{
-		{"bad_route", "badroute", &test.SomeStruct{}, nil, route.ErrInvalidRoute},
-		{"no_server_type", "bla.bla", &test.SomeStruct{}, nil, constants.ErrNoServerTypeChosenForRPC},
-		{"nonsense_rpc", "mytype.bla.bla", &test.SomeStruct{}, nil, constants.ErrNonsenseRPC},
-		{"success", "bla.bla.bla", &test.SomeStruct{}, &test.SomeStruct{A: 1}, nil},
-	}
+// func TestDoSendRPC(t *testing.T) {
+// 	app.server.ID = "myserver"
+// 	app.rpcServer = &cluster.NatsRPCServer{}
+// 	tables := []struct {
+// 		name     string
+// 		routeStr string
+// 		reply    proto.Message
+// 		arg      proto.Message
+// 		err      error
+// 	}{
+// 		{"bad_route", "badroute", &test.SomeStruct{}, nil, route.ErrInvalidRoute},
+// 		{"no_server_type", "bla.bla", &test.SomeStruct{}, nil, constants.ErrNoServerTypeChosenForRPC},
+// 		{"nonsense_rpc", "mytype.bla.bla", &test.SomeStruct{}, nil, constants.ErrNonsenseRPC},
+// 		{"success", "bla.bla.bla", &test.SomeStruct{}, &test.SomeStruct{A: 1}, nil},
+// 	}
 
-	for _, table := range tables {
-		t.Run(table.name, func(t *testing.T) {
-			ctx := context.Background()
-			if table.err == nil {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockSerializer := serializemocks.NewMockSerializer(ctrl)
-				mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
-				mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
-				mockRPCServer := clustermocks.NewMockRPCServer(ctrl)
-				messageEncoder := message.NewMessagesEncoder(false)
-				router := router.New()
-				svc := NewAppProcessor(
-					nil,
-					mockSerializer,
-					nil,
-					messageEncoder,
-					nil,
-					mockRPCClient,
-					mockRPCServer, nil, router, nil)
-				//   agent.NewRemoteService(mockRPCClient, mockRPCServer, mockSD, packetEncoder, mockSerializer, router, messageEncoder, &cluster.Server{})
-				assert.NotNil(t, svc)
-				// remoteService = svc
-				app.server.ID = "notmyserver"
-				b, err := proto.Marshal(&test.SomeStruct{A: 1})
-				assert.NoError(t, err)
-				mockSD.EXPECT().GetServer("myserver").Return(&cluster.Server{}, nil)
-				mockRPCClient.EXPECT().Call(ctx, protos.RPCType_User, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&protos.Response{Data: b}, nil)
-			}
-			err := RPCTo(ctx, "", "", "myserver", table.routeStr, table.reply, table.arg)
-			assert.Equal(t, table.err, err)
-		})
-	}
-}
+// 	for _, table := range tables {
+// 		t.Run(table.name, func(t *testing.T) {
+// 			ctx := context.Background()
+// 			if table.err == nil {
+// 				ctrl := gomock.NewController(t)
+// 				defer ctrl.Finish()
+// 				mockSerializer := serializemocks.NewMockSerializer(ctrl)
+// 				mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
+// 				mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
+// 				mockRPCServer := clustermocks.NewMockRPCServer(ctrl)
+// 				messageEncoder := message.NewMessagesEncoder(false)
+// 				router := router.New()
+// 				svc := NewAppProcessor(
+// 					nil,
+// 					mockSerializer,
+// 					nil,
+// 					messageEncoder,
+// 					nil,
+// 					mockRPCClient,
+// 					mockRPCServer, nil, router, nil)
+// 				//   agent.NewRemoteService(mockRPCClient, mockRPCServer, mockSD, packetEncoder, mockSerializer, router, messageEncoder, &cluster.Server{})
+// 				assert.NotNil(t, svc)
+// 				// remoteService = svc
+// 				app.server.ID = "notmyserver"
+// 				b, err := proto.Marshal(&test.SomeStruct{A: 1})
+// 				assert.NoError(t, err)
+// 				mockSD.EXPECT().GetServer("myserver").Return(&cluster.Server{}, nil)
+// 				mockRPCClient.EXPECT().Call(ctx, protos.RPCType_User, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&protos.Response{Data: b}, nil)
+// 			}
+// 			err := RPCTo(ctx, "", "", "myserver", table.routeStr, table.reply, table.arg)
+// 			assert.Equal(t, table.err, err)
+// 		})
+// 	}
+// }

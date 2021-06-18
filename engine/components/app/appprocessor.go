@@ -10,12 +10,12 @@ import (
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/common"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
+	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/timer"
@@ -66,17 +66,17 @@ func NewAppProcessor(
 
 	system *actor.ActorSystem,
 ) *AppMsgProcessor {
-	remote := common.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
 	p := &AppMsgProcessor{
 		serializer:       serializer,
 		appDieChan:       dieChan,
 		server:           server,
 		metricsReporters: metricsReporters,
 		messageEncoder:   messageEncoder,
-		remote:           remote,
 
 		actorSystem: system,
 	}
+	remote := common.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system, p)
+	p.remote = remote
 
 	return p
 }
@@ -126,121 +126,7 @@ func (p *AppMsgProcessor) Dispatch(thread int) {
 	}
 }
 
-func (p *AppMsgProcessor) CallEntityFromLocal(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	reply proto.Message,
-	arg proto.Message,
-) error {
-	return p.localCall(ctx, entityID, entityType, routeStr, reply, arg, 0)
-	// rt, err := route.Decode(router)
-	// if err != nil {
-	// 	// logger.Errorf("cannot decode route:%s err:%s", router, err)
-	// 	return err
-	// }
-
-	// typName, err := p.entityManager.GetTypName(entityID)
-	// if err != nil {
-	// 	logger.Warnf("找不到该实体的类型 id:%s err:%s", entityID, err)
-	// 	return err
-	// }
-	// routers := rtManager.getRoute(typName)
-
-	// h, err := routers.getHandler(rt)
-	// if err != nil {
-	// 	return e.NewError(err, e.ErrNotFoundCode)
-	// }
-
-	// processHandlerMessage(nil, rt, h, p.remoteService.serializer)
-	return nil
-}
-
-func (p *AppMsgProcessor) localCall(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message, mid int) error {
-	var ret interface{}
-	var err error
-
-	entity := p.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		// return &protos.Response{
-		// 	Error: &protos.Error{
-		// 		Code: e.ErrUnknownCode,
-		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-		// 	},
-		// }
-		err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
-		return err
-	}
-
-	// TODO 本地 call 这里marshal了一次，到实际call方法时，又unmarshal一次，重复了
-	argBytes, _ := p.serializer.Marshal(arg)
-
-	ret, err = p.actorSystem.Root.RequestFuture(
-		p.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: &protos.Request{
-				Type: protos.RPCType_User,
-				Msg: &protos.MsgV2{
-					Id:    uint64(mid),
-					Route: routeStr,
-					Data:  argBytes,
-					// Type:  protos.MsgType(msg.Type),
-					Eid: entityID,
-					Typ: entityType,
-					// Reply: ,
-				},
-			},
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return err
-	}
-	if reply != nil {
-		err := p.serializer.Unmarshal(ret.([]byte), reply)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
-	// ret, err := processHandlerMessage(
-	// 	ctx,
-	// 	route,
-	// 	p.serializer,
-	// 	a.Session,
-	// 	msg.EntityID,
-	// 	msg.EntityType,
-	// 	p,
-	// 	msg.Data,
-	// 	msg.Type,
-	// 	false,
-	// )
-	// if msg.Type != message.Notify {
-	// 	if err != nil {
-	// 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
-	// 		a.AnswerWithError(ctx, mid, err)
-	// 	} else {
-	// 		err := a.Session.ResponseMID(ctx, mid, ret)
-	// 		if err != nil {
-	// 			tracing.FinishSpan(ctx, err)
-	// 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
-	// 		}
-	// 	}
-	// } else {
-	// 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
-	// 	tracing.FinishSpan(ctx, err)
-	// }
-}
-
-func (r *AppMsgProcessor) processRemoteMessage2Entity(ctx context.Context, req *protos.Request) *protos.Response {
+func (r *AppMsgProcessor) Process(ctx context.Context, req *protos.Request) *protos.Response {
 	entityID := req.Msg.Eid
 	entityType := req.Msg.Typ
 	entity := r.entityManager.GetEntityVal(entityID, entityType)
@@ -257,7 +143,7 @@ func (r *AppMsgProcessor) processRemoteMessage2Entity(ctx context.Context, req *
 
 	rsp, err := r.actorSystem.Root.RequestFuture(
 		r.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
+		&common.LocalMessageWrapper{
 			Ctx: ctx,
 			Req: req,
 		},
@@ -285,3 +171,138 @@ func (r *AppMsgProcessor) processRemoteMessage2Entity(ctx context.Context, req *
 		}
 	}
 }
+
+func (p *AppMsgProcessor) CallService(ctx context.Context, serviceName string, routeStr string, reply proto.Message, arg proto.Message) error {
+	entityID := common.ServiceID(serviceName)
+	entityType := common.ServiceTypeName(serviceName)
+
+	return p.call(ctx, entityID, entityType, routeStr, reply, arg)
+}
+
+func (p *AppMsgProcessor) SendService(ctx context.Context, serviceName string, routeStr string, arg proto.Message) error {
+	entityID := common.ServiceID(serviceName)
+	entityType := common.ServiceTypeName(serviceName)
+
+	return p.call(ctx, entityID, entityType, routeStr, nil, arg)
+}
+
+func (p *AppMsgProcessor) CallEntity(
+	ctx context.Context,
+	entityID,
+	entityType string,
+	routeStr string,
+	reply proto.Message,
+	arg proto.Message,
+) error {
+	return p.call(ctx, entityID, entityType, routeStr, reply, arg)
+}
+
+func (p *AppMsgProcessor) SendEntity(
+	ctx context.Context,
+	entityID,
+	entityType string,
+	routeStr string,
+	arg proto.Message,
+) error {
+	return p.call(ctx, entityID, entityType, routeStr, nil, arg)
+}
+
+func (p *AppMsgProcessor) call(
+	ctx context.Context,
+	entityID,
+	entityType string,
+	routeStr string,
+	reply proto.Message,
+	arg proto.Message,
+) error {
+	var ret interface{}
+	var err error
+
+	// 本地没有这个实体
+	entity := p.entityManager.GetEntityVal(entityID, entityType)
+	if entity == nil {
+		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
+		droute, err := route.Decode(routeStr)
+		if err != nil {
+			return err
+		}
+		if reply != nil {
+			return p.remote.RPC(ctx, entityID, entityType, "", droute, reply, arg)
+		} else {
+			return p.remote.Send(ctx, entityID, entityType, "", droute, arg)
+		}
+		// return &protos.Response{
+		// 	Error: &protos.Error{
+		// 		Code: e.ErrUnknownCode,
+		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
+		// 	},
+		// }
+		// err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
+		// return err
+	}
+
+	// TODO 本地 call 这里marshal了一次，到实际call方法时，又unmarshal一次，重复了
+	argBytes, _ := p.serializer.Marshal(arg)
+
+	ret, err = p.actorSystem.Root.RequestFuture(
+		p.entityManager.GetEntityPid(entityID, entityType),
+		&common.LocalMessageWrapper{
+			Ctx: ctx,
+			Req: &protos.Request{
+				Type: protos.RPCType_User,
+				Msg: &protos.MsgV2{
+					// Id:    uint64(mid),
+					Route: routeStr,
+					Data:  argBytes,
+					// Type:  protos.MsgType(msg.Type),
+					Eid: entityID,
+					Typ: entityType,
+					// Reply: ,
+				},
+			},
+		},
+		//TODO 这里写的2秒
+		2*time.Second,
+	).Result()
+
+	if err != nil {
+		return err
+	}
+	if reply != nil {
+		err := p.serializer.Unmarshal(ret.([]byte), reply)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+// ret, err := processHandlerMessage(
+// 	ctx,
+// 	route,
+// 	p.serializer,
+// 	a.Session,
+// 	msg.EntityID,
+// 	msg.EntityType,
+// 	p,
+// 	msg.Data,
+// 	msg.Type,
+// 	false,
+// )
+// if msg.Type != message.Notify {
+// 	if err != nil {
+// 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
+// 		a.AnswerWithError(ctx, mid, err)
+// 	} else {
+// 		err := a.Session.ResponseMID(ctx, mid, ret)
+// 		if err != nil {
+// 			tracing.FinishSpan(ctx, err)
+// 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
+// 		}
+// 	}
+// } else {
+// 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
+// 	tracing.FinishSpan(ctx, err)
+// }

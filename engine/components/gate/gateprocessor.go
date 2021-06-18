@@ -18,7 +18,6 @@ import (
 	"github.com/tutumagi/pitaya/conn/packet"
 	"github.com/tutumagi/pitaya/constants"
 	pcontext "github.com/tutumagi/pitaya/context"
-	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/common"
 	services "github.com/tutumagi/pitaya/engine/common"
 
@@ -87,7 +86,7 @@ func NewGateProcessor(
 
 	system *actor.ActorSystem,
 ) *GateProcessor {
-	remote := services.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
+	remote := services.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system, nil)
 	p := &GateProcessor{
 		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
 		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
@@ -346,7 +345,7 @@ func (p GateProcessor) localProcess(ctx context.Context, a *agent.Agent, route *
 	// 给指定实体的 actor 发送消息
 	ret, err = p.actorSystem.Root.RequestFuture(
 		p.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
+		&common.LocalMessageWrapper{
 			Ctx: ctx,
 			Req: &protos.Request{
 				Type: protos.RPCType_Sys,

@@ -21,12 +21,7 @@
 package app
 
 import (
-	"context"
-	"reflect"
-
 	"github.com/golang/protobuf/proto"
-	"github.com/tutumagi/pitaya/constants"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/worker"
 )
 
@@ -34,25 +29,25 @@ import (
 
 // }
 
-// RPC calls a method in a different server
-func RPC(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message) error {
-	return doSendRPC(ctx, entityID, entityType, "", routeStr, reply, arg)
-}
+// // RPC calls a method in a different server
+// func RPC(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message) error {
+// 	return doSendRPC(ctx, entityID, entityType, "", routeStr, reply, arg)
+// }
 
-// RPCTo send a rpc to a specific server
-func RPCTo(ctx context.Context, entityID, entityType string, serverID, routeStr string, reply proto.Message, arg proto.Message) error {
-	return doSendRPC(ctx, entityID, entityType, serverID, routeStr, reply, arg)
-}
+// // RPCTo send a rpc to a specific server
+// func RPCTo(ctx context.Context, entityID, entityType string, serverID, routeStr string, reply proto.Message, arg proto.Message) error {
+// 	return doSendRPC(ctx, entityID, entityType, serverID, routeStr, reply, arg)
+// }
 
-// Send calls a method in a different server
-func Send(ctx context.Context, entityID, entityType string, routeStr string, arg proto.Message) error {
-	return doSendRPC(ctx, entityID, entityType, "", routeStr, nil, arg)
-}
+// // Send calls a method in a different server
+// func Send(ctx context.Context, entityID, entityType string, routeStr string, arg proto.Message) error {
+// 	return doSendRPC(ctx, entityID, entityType, "", routeStr, nil, arg)
+// }
 
-// SendTo send a rpc to a specific server
-func SendTo(ctx context.Context, entityID, entityType string, serverID, routeStr string, arg proto.Message) error {
-	return doSendRPC(ctx, entityID, entityType, serverID, routeStr, nil, arg)
-}
+// // SendTo send a rpc to a specific server
+// func SendTo(ctx context.Context, entityID, entityType string, serverID, routeStr string, arg proto.Message) error {
+// 	return doSendRPC(ctx, entityID, entityType, serverID, routeStr, nil, arg)
+// }
 
 // ReliableRPC enqueues RPC to worker so it's executed asynchronously
 // Default enqueue options are used
@@ -75,39 +70,39 @@ func ReliableRPCWithOptions(
 	return app.worker.EnqueueRPCWithOptions(routeStr, metadata, reply, arg, opts)
 }
 
-func doSendRPC(ctx context.Context, entityID, entityType string, serverID, routeStr string, reply proto.Message, arg proto.Message) error {
-	if app.rpcServer == nil {
-		return constants.ErrRPCServerNotInitialized
-	}
+// func doSendRPC(ctx context.Context, entityID, entityType string, serverID, routeStr string, reply proto.Message, arg proto.Message) error {
+// 	if app.rpcServer == nil {
+// 		return constants.ErrRPCServerNotInitialized
+// 	}
 
-	if reply != nil {
-		if reflect.TypeOf(reply).Kind() != reflect.Ptr {
-			return constants.ErrReplyShouldBePtr
-		}
-	}
+// 	if reply != nil {
+// 		if reflect.TypeOf(reply).Kind() != reflect.Ptr {
+// 			return constants.ErrReplyShouldBePtr
+// 		}
+// 	}
 
-	rt, err := route.Decode(routeStr)
-	if err != nil {
-		return err
-	}
+// 	rt, err := route.Decode(routeStr)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// 如果既没有serverID 又没有 serverType 则返回 by 涂飞
-	if serverID == "" && rt.SvType == "" {
-		return constants.ErrNoServerTypeChosenForRPC
-	}
+// 	// 如果既没有serverID 又没有 serverType 则返回 by 涂飞
+// 	if serverID == "" && rt.SvType == "" {
+// 		return constants.ErrNoServerTypeChosenForRPC
+// 	}
 
-	if (rt.SvType == app.server.Type && serverID == "") || serverID == app.server.ID {
-		// 如果发现是 rpc 的服务是 本地 则直接 call 本地的方法 by 涂飞
-		// return constants.ErrNonsenseRPC
+// 	if (rt.SvType == app.server.Type && serverID == "") || serverID == app.server.ID {
+// 		// 如果发现是 rpc 的服务是 本地 则直接 call 本地的方法 by 涂飞
+// 		// return constants.ErrNonsenseRPC
 
-		return handlerService.CallEntityFromLocal(ctx, entityID, entityType, routeStr, reply, arg)
-	}
+// 		return handlerService.CallEntityFromLocal(ctx, entityID, entityType, routeStr, reply, arg)
+// 	}
 
-	if reply == nil {
-		// 如果没有reply 则使用 rpc send
-		return handlerService.remote.Send(ctx, entityID, entityType, serverID, rt, reply, arg)
-	} else {
-		// 如果有reply 则使用 rpc call
-		return handlerService.remote.RPC(ctx, entityID, entityType, serverID, rt, reply, arg)
-	}
-}
+// 	if reply == nil {
+// 		// 如果没有reply 则使用 rpc send
+// 		return handlerService.remote.Send(ctx, entityID, entityType, serverID, rt, arg)
+// 	} else {
+// 		// 如果有reply 则使用 rpc call
+// 		return handlerService.remote.RPC(ctx, entityID, entityType, serverID, rt, reply, arg)
+// 	}
+// }

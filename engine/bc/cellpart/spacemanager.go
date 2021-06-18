@@ -1,7 +1,7 @@
 package cellpart
 
 import (
-	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 )
 
@@ -41,7 +41,7 @@ func GetSpace(id string) *Space {
 func CreateSpace(kind int32, id string, baseServerID string, extra map[string]string) *Space {
 	logger.Infof("create space %d %s", kind, id)
 	// TODO 这里是否需要存储到db里面
-	s := createCellEntityOnlyInit(id, consts.SpaceTypeName(kind))
+	s := createCellEntityOnlyInit(id, common.SpaceTypeName(kind))
 
 	ss := s.AsSpace()
 	// 这里 150000， 大概有11万的资源，3万的土地
