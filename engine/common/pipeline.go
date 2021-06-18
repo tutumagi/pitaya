@@ -1,4 +1,4 @@
-// Copyright (c) TFG Co. All Rights Reserved.
+// Copyright (c) nano Author and TFG Co. All Rights Reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,41 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package common
 
-import (
-	"context"
-	"testing"
+import "github.com/tutumagi/pitaya/pipeline"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/tutumagi/pitaya/pipeline"
-)
-
-func resetPipelines() {
-	pipeline.BeforeHandler.Handlers = make([]pipeline.HandlerTempl, 0)
-	pipeline.AfterHandler.Handlers = make([]pipeline.AfterHandlerTempl, 0)
+// BeforeHandler pushs a function to the back of the functions pipeline that will
+// be executed before the handler method
+func BeforeHandler(h pipeline.HandlerTempl) {
+	pipeline.BeforeHandler.PushBack(h)
 }
 
-var myHandler = func(ctx context.Context, in interface{}) (interface{}, error) {
-	return []byte("test"), nil
+// AfterHandler pushs a function to the back of the functions pipeline that will
+// be executed after the handler method
+func AfterHandler(h pipeline.AfterHandlerTempl) {
+	pipeline.AfterHandler.PushBack(h)
 }
 
-var myAfterHandler = func(ctx context.Context, out interface{}, err error) (interface{}, error) {
-	return []byte("test"), nil
-}
-
-func TestBeforeHandler(t *testing.T) {
-	resetPipelines()
-	BeforeHandler(myHandler)
-	r, err := pipeline.BeforeHandler.Handlers[0](nil, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("test"), r)
-}
-
-func TestAfterHandler(t *testing.T) {
-	resetPipelines()
-	AfterHandler(myAfterHandler)
-	r, err := pipeline.AfterHandler.Handlers[0](nil, nil, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("test"), r)
+func AppendHandler(route string, h pipeline.HandlerTempl) {
+	pipeline.BeforeRouterHandler.Append(route, h)
 }

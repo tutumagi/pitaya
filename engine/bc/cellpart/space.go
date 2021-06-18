@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/tutumagi/pitaya/engine/aoi"
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"gitlab.gamesword.com/nut/dreamcity/game/define"
 
-	"github.com/tutumagi/pitaya"
 	"github.com/tutumagi/pitaya/timer"
 	"go.uber.org/zap"
 )
@@ -233,7 +233,7 @@ func (s *Space) notifyEntityEnterSpaceResult(e *Entity) {
 		EntityLabel:   e.TypName(),
 	}
 	logger.Infof("notify entity enter space %s", msg.String())
-	err := pitaya.SendTo(
+	err := app.SendTo(
 		context.TODO(),
 		"",
 		"",

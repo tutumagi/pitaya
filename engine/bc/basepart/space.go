@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"gitlab.gamesword.com/nut/dreamcity/game/define"
 	"go.uber.org/zap"
 
-	"github.com/tutumagi/pitaya"
 	"github.com/tutumagi/pitaya/timer"
 )
 
@@ -224,12 +224,12 @@ func (s *Space) PrepareCellData() map[string]string {
 // 		ErrMsg:        "",
 // 		SpaceID:       s.ID,
 // 		SpaceKind:     s.kind,
-// 		SpaceServerID: pitaya.GetServerID(),
+// 		SpaceServerID: app.GetServerID(),
 // 		EntityID:      e.ID,
 // 		EntityLabel:   e.TypName(),
 // 	}
 // 	logger.Infof("notify entity enter space %s", msg.String())
-// 	err := pitaya.SendTo(
+// 	err := app.SendTo(
 // 		context.TODO(),
 // 		e.baseServerID,
 // 		"entity.enterspaceresult",
@@ -309,7 +309,7 @@ func (s *Space) PrepareCellData() map[string]string {
 // 		false,
 // 	)
 // 	s.enter(e, pos)
-// 	logger.Debugf("pitaya.handler Space::CreateEntity e = %+v", e)
+// 	logger.Debugf("app.handler Space::CreateEntity e = %+v", e)
 // 	return e
 // }
 
@@ -379,7 +379,7 @@ func (s *Space) cellPartCreated() error {
 		return err
 	}
 	// 在 baseapp 时，通知 cellappmgr 场景创建成功了
-	err = pitaya.Send(context.TODO(),
+	err = app.Send(context.TODO(),
 		"",
 		"",
 		"cellmgrapp.spaceservice.spaceloaded",

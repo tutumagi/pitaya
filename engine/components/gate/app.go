@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package gate
 
 import (
 	"os"
@@ -36,7 +36,7 @@ import (
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/defaultpipelines"
+	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	mods "github.com/tutumagi/pitaya/modules"
@@ -111,8 +111,6 @@ func (a *App) HandleNewConn(conn acceptor.PlayerConn) {
 	handlerService.Handle(conn)
 }
 
-type startServeMessage struct{}
-
 var (
 	app = &App{
 		server:           cluster.NewServer(uuid.New().String(), "game", true, map[string]string{}),
@@ -160,7 +158,7 @@ func Configure(
 	app.server.Metadata = serverMetadata
 	app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
 	configureMetrics(serverType)
-	configureDefaultPipelines(app.config)
+
 	app.configured = true
 }
 
@@ -197,12 +195,6 @@ func configureMetrics(serverType string) {
 			logger.Log.Info("successfully configured statsd metrics reporter")
 			AddMetricsReporter(metricsReporter)
 		}
-	}
-}
-
-func configureDefaultPipelines(config *config.Config) {
-	if config.GetBool("pitaya.defaultpipelines.structvalidation.enabled") {
-		BeforeHandler(defaultpipelines.StructValidatorInstance.Validate)
 	}
 }
 
@@ -291,16 +283,16 @@ func Start() {
 	// 	app.serviceDiscovery.AddListener(app.rpcClient.(*cluster.GRPCClient))
 	// }
 
-	if err := RegisterModuleBefore(app.rpcServer, "rpcServer"); err != nil {
+	if err := common.RegisterModuleBefore(app.rpcServer, "rpcServer"); err != nil {
 		logger.Log.Fatal("failed to register rpc server module: %s", err.Error())
 	}
-	if err := RegisterModuleBefore(app.rpcClient, "rpcClient"); err != nil {
+	if err := common.RegisterModuleBefore(app.rpcClient, "rpcClient"); err != nil {
 		logger.Log.Fatal("failed to register rpc client module: %s", err.Error())
 	}
 	// set the service discovery as the last module to be started to ensure
 	// all modules have been properly initialized before the server starts
 	// receiving requests from other pitaya servers
-	if err := RegisterModuleAfter(app.serviceDiscovery, "serviceDiscovery"); err != nil {
+	if err := common.RegisterModuleAfter(app.serviceDiscovery, "serviceDiscovery"); err != nil {
 		logger.Log.Fatal("failed to register service discovery module: %s", err.Error())
 	}
 
@@ -370,7 +362,7 @@ func Start() {
 	logger.Log.Warn("server is stopping...")
 
 	session.CloseAll()
-	shutdownModules()
+	common.ShutdownModules()
 	// shutdownComponents()
 }
 
@@ -404,10 +396,10 @@ func listen() {
 	if app.serverMode == Cluster && app.server.Frontend && app.config.GetBool("pitaya.session.unique") {
 		unique := mods.NewUniqueSession(app.server, app.rpcServer, app.rpcClient)
 		handlerService.remote.AddRemoteBindingListener(unique)
-		RegisterModule(unique, "uniqueSession")
+		common.RegisterModule(unique, "uniqueSession")
 	}
 
-	startModules()
+	common.StartModules()
 
 	logger.Log.Info("all modules started!")
 

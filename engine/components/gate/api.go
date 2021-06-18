@@ -1,4 +1,4 @@
-package pitaya
+package gate
 
 import (
 	"context"

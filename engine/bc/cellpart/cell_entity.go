@@ -10,10 +10,11 @@ import (
 	"unsafe"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/tutumagi/pitaya"
+
 	"github.com/tutumagi/pitaya/engine/aoi"
 	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	err "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
@@ -85,7 +86,7 @@ func (e *Entity) Destroy(reason ...int32) {
 	// TODO 告诉baseapp 实体的cellpart销毁了
 	// // 如果是在 base server destroy，通知对应的space 玩家离开了
 	// if e.SpaceCreated() {
-	// 	if erre := pitaya.SendTo(
+	// 	if erre := app.SendTo(
 	// 		context.Background(),
 	// 		e.SpaceServerID(),
 	// 		"cellremote.destroyentity",
@@ -182,7 +183,7 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	e.enteringSpaceRequest.ViewLayer = viewLayer
 
 	// 请求进入场景
-	err := pitaya.Send(context.Background(), "", "", "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+	err := app.Send(context.Background(), "", "", "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
 	if err != nil {
 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
 		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)
@@ -283,7 +284,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 	if e.UID == "" {
 		return
 	}
-	_, err := pitaya.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
+	_, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
 	if err != nil {
 		logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
 	}
@@ -307,7 +308,7 @@ func (e *Entity) PushNeighbourClient(router string, msg interface{}) {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			_, err := pitaya.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
+			_, err := app.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
 			if err != nil {
 				logger.Errorf("push neighbour client(uid:%s) err:%s", other.UID, err)
 			}
@@ -416,7 +417,7 @@ func (e *Entity) PushInterestin(router string, msg interface{}) {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			pitaya.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
+			app.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
 		}
 	}
 }
@@ -765,6 +766,6 @@ func (e *Entity) RemoveOverTimerIfHas() {
 
 // TODO 为了避免循环引用，后面要考虑怎么弄这个
 func curServerID() string {
-	// return pitaya.GetServerID()
+	// return app.GetServerID()
 	return ""
 }

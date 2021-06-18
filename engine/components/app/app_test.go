@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package app
 
 import (
 	"context"
@@ -41,7 +41,6 @@ import (
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
 	e "github.com/tutumagi/pitaya/errors"
-	"github.com/tutumagi/pitaya/groups"
 	"github.com/tutumagi/pitaya/helpers"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
@@ -50,9 +49,7 @@ import (
 	"github.com/tutumagi/pitaya/serialize/json"
 	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/timer"
-
 	// "go.etcd.io/etcd/integration"
-	"go.etcd.io/etcd/tests/v3/integration"
 )
 
 var (
@@ -98,14 +95,6 @@ func setup() {
 		panic(err)
 	}
 	typeOfNatsRPCClient = reflect.TypeOf(natsRPCClient)
-
-	c := integration.NewClusterV3(nil, &integration.ClusterConfig{Size: 1})
-	cli := c.RandClient()
-	gsi, err := groups.NewEtcdGroupService(app.config, cli)
-	if err != nil {
-		panic(err)
-	}
-	InitGroups(gsi)
 }
 
 func initApp() {

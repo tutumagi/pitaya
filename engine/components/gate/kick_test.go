@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package gate
 
 import (
 	"context"
@@ -61,7 +61,7 @@ func TestSendKickToUsersLocalSession(t *testing.T) {
 		mockNetworkEntity.EXPECT().Close().Times(2)
 	}
 
-	failedUids, err := SendKickToUsers([]string{table.uid1, table.uid2}, table.frontendType)
+	failedUids, err := SendKickToUsers([]string{table.uid1, table.uid2})
 	assert.Nil(t, failedUids)
 	assert.NoError(t, err)
 }
@@ -86,7 +86,7 @@ func TestSendKickToUsersFail(t *testing.T) {
 
 	mockNetworkEntity.EXPECT().Kick(context.Background()).Times(1)
 	mockNetworkEntity.EXPECT().Close()
-	failedUids, err := SendKickToUsers([]string{table.uid1, table.uid2}, table.frontendType)
+	failedUids, err := SendKickToUsers([]string{table.uid1, table.uid2})
 	assert.Len(t, failedUids, 1)
 	assert.Equal(t, failedUids[0], table.uid2)
 	assert.Equal(t, err, table.err)
@@ -115,7 +115,7 @@ func TestSendKickToUsersRemoteSession(t *testing.T) {
 				mockRPCClient.EXPECT().SendKick(uid, gomock.Any(), expectedKick).Return(table.err)
 			}
 
-			failedUids, err := SendKickToUsers(table.uids, table.frontendType)
+			failedUids, err := SendKickToUsers(table.uids)
 			assert.Equal(t, err, table.err)
 			if table.err != nil {
 				assert.NotNil(t, failedUids)

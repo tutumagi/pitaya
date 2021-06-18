@@ -1,4 +1,4 @@
-package pitaya
+package common
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	"github.com/tutumagi/pitaya/util"
 )
 
+// 用来处理rpc send/call 和 rpc process
 type RemoteService struct {
 	appDieChan chan bool // die channel app
 
@@ -89,11 +90,11 @@ func (p *RemoteService) Start() {
 	// app.config.GetInt("pitaya.concurrency.handler.dispatch")
 	const numberDispatch = 10
 	for i := 0; i < numberDispatch; i++ {
-		go p.Dispatch(i)
+		go p.dispatch(i)
 	}
 }
 
-func (p *RemoteService) Dispatch(thread int) {
+func (p *RemoteService) dispatch(thread int) {
 	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
 	// defer timer.GlobalTicker.Stop()
 	defer func() {
@@ -381,7 +382,7 @@ func (r *RemoteService) remoteSend(
 	return r.rpcClient.Post(ctx, rpcType, route, session, msg, target)
 }
 
-func (r *RemoteService) remoteProcess(
+func (r *RemoteService) RemoteProcess(
 	ctx context.Context,
 	server *cluster.Server,
 	a *agent.Agent,

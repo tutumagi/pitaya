@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package common
 
 import (
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/interfaces"
@@ -82,9 +81,9 @@ func TestGetModule(t *testing.T) {
 }
 
 func TestStartupModules(t *testing.T) {
-	initApp()
+	// initApp()
 	resetModules()
-	Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
+	// Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
 
 	err := RegisterModule(&MyMod{name: "mod1"}, "mod1")
 	assert.NoError(t, err)
@@ -95,7 +94,7 @@ func TestStartupModules(t *testing.T) {
 	err = RegisterModuleAfter(&MyMod{name: "mod4"}, "mod4")
 	assert.NoError(t, err)
 
-	startModules()
+	StartModules()
 	assert.Equal(t, true, modulesMap["mod1"].(*MyMod).running)
 	assert.Equal(t, true, modulesMap["mod2"].(*MyMod).running)
 	assert.Equal(t, true, modulesMap["mod3"].(*MyMod).running)
@@ -105,8 +104,8 @@ func TestStartupModules(t *testing.T) {
 
 func TestShutdownModules(t *testing.T) {
 	resetModules()
-	initApp()
-	Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
+	// initApp()
+	// Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
 
 	err := RegisterModule(&MyMod{name: "mod1"}, "mod1")
 	assert.NoError(t, err)
@@ -117,10 +116,10 @@ func TestShutdownModules(t *testing.T) {
 	err = RegisterModuleAfter(&MyMod{name: "mod4"}, "mod4")
 	assert.NoError(t, err)
 
-	startModules()
+	StartModules()
 
 	modulesOrder = []string{}
-	shutdownModules()
+	ShutdownModules()
 	assert.Equal(t, false, modulesMap["mod1"].(*MyMod).running)
 	assert.Equal(t, false, modulesMap["mod2"].(*MyMod).running)
 	assert.Equal(t, false, modulesMap["mod3"].(*MyMod).running)

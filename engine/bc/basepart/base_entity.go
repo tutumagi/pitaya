@@ -10,10 +10,11 @@ import (
 	"unsafe"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/tutumagi/pitaya"
+
 	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/engine/bc/internal/consts"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/dbmgr"
 	"github.com/tutumagi/pitaya/engine/math32"
 	err "github.com/tutumagi/pitaya/errors"
@@ -257,7 +258,7 @@ func (e *Entity) attrChanged() {
 			Attrs: changeKeyBytes,
 		}
 
-		erro := pitaya.SendTo(context.TODO(), e.ID,
+		erro := app.SendTo(context.TODO(), e.ID,
 			e.TypName(), e.SpaceServerID(), "cellremote.updateattr", req)
 		if erro != nil {
 			logger.Warn("send to cellapp update attr err", zap.String("entity", e.String()), zap.Error(erro))
@@ -404,7 +405,7 @@ func (e *Entity) NotifyCellMove(pos *math32.Vector3, yaw float32) {
 		},
 		Yaw: yaw,
 	}
-	if err := pitaya.SendTo(
+	if err := app.SendTo(
 		context.TODO(),
 		e.ID,
 		e.TypName(),
@@ -577,7 +578,7 @@ func (e *Entity) Destroy(reason ...int32) {
 
 	// 如果是在 base server destroy，通知对应的space 玩家离开了
 	if e.SpaceCreated() {
-		if erre := pitaya.SendTo(
+		if erre := app.SendTo(
 			context.Background(),
 			e.ID,
 			e.TypName(),
@@ -673,7 +674,7 @@ func (e *Entity) getCellData() map[string]interface{} {
 // 		EntityLabel: e.typeDesc.name,
 // 		// 实体序列化后的数据，目前使用json
 // 		EntityDatas:  databytes,
-// 		FromServerID: pitaya.GetServerID(),
+// 		FromServerID: app.GetServerID(),
 // 		// 实体位置
 // 		// Pos: &protos.Vec3{X: pos.X, Y: pos.Y, Z: pos.Z},
 // 		// // 实体朝向
@@ -713,7 +714,7 @@ func (e *Entity) GetCellData() *protos.SEntityData {
 // 		EntityID: e.ID,
 // 		// 实体typName
 // 		EntityLabel:  e.typeDesc.name,
-// 		FromServerID: pitaya.GetServerID(),
+// 		FromServerID: app.GetServerID(),
 // 		// 实体位置
 // 		// Pos: &protos.Vec3{X: pos.X, Y: pos.Y, Z: pos.Z},
 // 		// // 实体朝向
@@ -752,7 +753,7 @@ func (e *Entity) LeaveSpace() error {
 
 	// 如果当前server 不是 空间相关的server
 	// 请求离开场景
-	err := pitaya.RPCTo(
+	err := app.RPCTo(
 		context.Background(),
 		e.ID,
 		e.TypName(),
@@ -788,7 +789,7 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	e.enteringSpaceRequest.ViewLayer = viewLayer
 
 	// 请求进入场景
-	err := pitaya.Send(context.Background(), e.ID,
+	err := app.Send(context.Background(), e.ID,
 		e.TypName(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
 	if err != nil {
 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
@@ -827,7 +828,7 @@ func (e *Entity) migrateToSpaceFromBase(spaceID string, spaceKind int32, pos mat
 		ViewLayer: viewLayer,
 	}
 	// 通知指定的的cellapp 进行进入场景操作
-	err := pitaya.SendTo(context.Background(), e.ID,
+	err := app.SendTo(context.Background(), e.ID,
 		e.TypName(),
 		spaceServerID,
 		"cellremote.enterspacefrombase",
@@ -908,7 +909,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 	if e.UID == "" {
 		return
 	}
-	_, err := pitaya.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
+	_, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
 	if err != nil {
 		logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
 	}
@@ -928,7 +929,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 
 // func (e *requestEnterSpacePart) resetEnterSpaceRequest() {
 // 	e.enteringSpaceRequest.Reset()
-// 	e.enteringSpaceRequest.FromServerID = pitaya.GetServerID()
+// 	e.enteringSpaceRequest.FromServerID = app.GetServerID()
 // 	if e.enteringSpaceRequest.Pos == nil {
 // 		e.enteringSpaceRequest.Pos = &protos.Vec3{X: 0, Y: 0, Z: 0}
 // 	} else {
@@ -950,7 +951,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 // 	e.enteringSpaceRequest.ViewLayer = viewLayer
 
 // 	// 请求进入场景
-// 	err := pitaya.Send(context.Background(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
+// 	err := app.Send(context.Background(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
 // 	if err != nil {
 // 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
 // 		e.b.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)

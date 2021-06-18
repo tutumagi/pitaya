@@ -18,14 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package app
 
 import (
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/util"
 )
 
@@ -47,13 +46,7 @@ func SendPushToUsers(route string, v interface{}, uids []string, frontendType st
 	// logger.Log.Debugf("Type=PushToUsers Route=%s, SvType=%s, #Users=%d", route, frontendType, len(uids))
 
 	for _, uid := range uids {
-		if s := session.GetSessionByUID(uid); s != nil && app.server.Type == frontendType {
-			if err := s.Push(route, data); err != nil {
-				notPushedUids = append(notPushedUids, uid)
-				logger.Log.Errorf("Session push message error, ID=%d, UID=%d, Error=%s",
-					s.ID(), s.UID(), err.Error())
-			}
-		} else if app.rpcClient != nil {
+		if app.rpcClient != nil {
 			push := &protos.Push{
 				Route: route,
 				Uid:   uid,

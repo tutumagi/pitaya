@@ -1,4 +1,4 @@
-package pitaya
+package app
 
 import (
 	"context"
@@ -7,30 +7,19 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/golang/protobuf/proto"
-	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/timer"
-	"github.com/tutumagi/pitaya/tracing"
 )
-
-var handlerType = "handler"
-
-type unhandledMessage struct {
-	ctx   context.Context
-	agent *agent.Agent
-	route *route.Route
-	msg   *message.Message
-}
 
 type EntityManager interface {
 	// 通过实体 ID 获取 typeName
@@ -42,9 +31,7 @@ type EntityManager interface {
 }
 
 type AppMsgProcessor struct {
-	appDieChan      chan bool             // die channel app
-	chLocalProcess  chan unhandledMessage // channel of messages that will be processed locally
-	chRemoteProcess chan unhandledMessage // channel of messages that will be processed remotely
+	appDieChan chan bool // die channel app
 
 	messageEncoder message.Encoder
 	serializer     serialize.Serializer // message serializer
@@ -59,7 +46,7 @@ type AppMsgProcessor struct {
 	heartbeatTimeout   time.Duration
 	messagesBufferSize int
 
-	remote *RemoteService
+	remote *common.RemoteService
 
 	entityManager EntityManager
 	actorSystem   *actor.ActorSystem
@@ -67,13 +54,7 @@ type AppMsgProcessor struct {
 
 func NewAppProcessor(
 	dieChan chan bool,
-	packetDecoder codec.PacketDecoder,
-	packetEncoder codec.PacketEncoder,
 	serializer serialize.Serializer,
-	heartbeatTime time.Duration,
-	messagesBufferSize,
-	localProcessBufferSize,
-	remoteProcessBufferSize int,
 	server *cluster.Server,
 	messageEncoder message.Encoder,
 	metricsReporters []metrics.Reporter,
@@ -85,20 +66,14 @@ func NewAppProcessor(
 
 	system *actor.ActorSystem,
 ) *AppMsgProcessor {
-	remote := NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
+	remote := common.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
 	p := &AppMsgProcessor{
-		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
-		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
-		decoder:            packetDecoder,
-		encoder:            packetEncoder,
-		messagesBufferSize: messagesBufferSize,
-		serializer:         serializer,
-		heartbeatTimeout:   heartbeatTime,
-		appDieChan:         dieChan,
-		server:             server,
-		metricsReporters:   metricsReporters,
-		messageEncoder:     messageEncoder,
-		remote:             remote,
+		serializer:       serializer,
+		appDieChan:       dieChan,
+		server:           server,
+		metricsReporters: metricsReporters,
+		messageEncoder:   messageEncoder,
+		remote:           remote,
 
 		actorSystem: system,
 	}
@@ -132,15 +107,7 @@ func (p *AppMsgProcessor) Dispatch(thread int) {
 	for {
 		// Calls to remote servers block calls to local server
 		select {
-		case lm := <-p.chLocalProcess:
-			metrics.ReportMessageProcessDelayFromCtx(lm.ctx, p.metricsReporters, "local")
-			p.localProcess(lm.ctx, lm.agent, lm.route, lm.msg)
-
-		case rm := <-p.chRemoteProcess:
-			metrics.ReportMessageProcessDelayFromCtx(rm.ctx, p.metricsReporters, "remote")
-			p.remote.remoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
-
-			// 收到 rpc call/post 后，处理消息
+		// 收到 rpc call/post 后，处理消息
 		// case rpcReq := <-p.remoteService.rpcServer.GetUnhandledRequestsChannel():
 		// 	// logger.Log.Infof("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for ", zap.Any("rpcReq", rpcReq))
 		// 	// logger.Log.Debugf("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for route=%s", rpcReq.Msg.Route)
@@ -188,89 +155,6 @@ func (p *AppMsgProcessor) CallEntityFromLocal(
 
 	// processHandlerMessage(nil, rt, h, p.remoteService.serializer)
 	return nil
-}
-
-func (p *AppMsgProcessor) localProcess(ctx context.Context, a *agent.Agent, route *route.Route, msg *message.Message) {
-	var mid uint
-	switch msg.Type {
-	case message.Request:
-		mid = msg.ID
-	case message.Notify:
-		mid = 0
-	}
-
-	var ret interface{}
-	var err error
-
-	entityID := msg.EntityID
-	entityType := msg.EntityType
-	entity := p.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		// return &protos.Response{
-		// 	Error: &protos.Error{
-		// 		Code: e.ErrUnknownCode,
-		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-		// 	},
-		// }
-		err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
-	}
-
-	// 给指定实体的 actor 发送消息
-	ret, err = p.actorSystem.Root.RequestFuture(
-		p.entityManager.GetEntityPid(entityID, entityType),
-		&metapart.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: &protos.Request{
-				Type: protos.RPCType_Sys,
-				Session: &protos.Session{
-					Id:     a.Session.ID(),
-					Uid:    a.Session.UID(),
-					RoleID: a.Session.RoleID(),
-				},
-				Msg: &protos.MsgV2{
-					Id:    uint64(mid),
-					Route: msg.Route,
-					Data:  msg.Data,
-					Type:  protos.MsgType(msg.Type),
-					Eid:   msg.EntityID,
-					Typ:   msg.EntityType,
-					// Reply: ,
-				},
-			},
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	// ret, err := processHandlerMessage(
-	// 	ctx,
-	// 	route,
-	// 	p.serializer,
-	// 	a.Session,
-	// 	msg.EntityID,
-	// 	msg.EntityType,
-	// 	p,
-	// 	msg.Data,
-	// 	msg.Type,
-	// 	false,
-	// )
-	if msg.Type != message.Notify {
-		if err != nil {
-			logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
-			a.AnswerWithError(ctx, mid, err)
-		} else {
-			err := a.Session.ResponseMID(ctx, mid, ret)
-			if err != nil {
-				tracing.FinishSpan(ctx, err)
-				metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
-			}
-		}
-	} else {
-		metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
-		tracing.FinishSpan(ctx, err)
-	}
 }
 
 func (p *AppMsgProcessor) localCall(ctx context.Context, entityID, entityType string, routeStr string, reply proto.Message, arg proto.Message, mid int) error {

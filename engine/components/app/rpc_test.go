@@ -18,19 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package app
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/tutumagi/pitaya/cluster"
 	clustermocks "github.com/tutumagi/pitaya/cluster/mocks"
-	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/protos"
@@ -65,8 +63,6 @@ func TestDoSendRPC(t *testing.T) {
 		t.Run(table.name, func(t *testing.T) {
 			ctx := context.Background()
 			if table.err == nil {
-				packetEncoder := codec.NewPomeloPacketEncoder()
-				packetDecoder := codec.NewPomeloPacketDecoder()
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockSerializer := serializemocks.NewMockSerializer(ctrl)
@@ -77,13 +73,7 @@ func TestDoSendRPC(t *testing.T) {
 				router := router.New()
 				svc := NewAppProcessor(
 					nil,
-					packetDecoder,
-					packetEncoder,
 					mockSerializer,
-					1*time.Second,
-					100,
-					100,
-					100,
 					nil,
 					messageEncoder,
 					nil,

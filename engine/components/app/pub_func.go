@@ -18,59 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package app
 
 import (
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tutumagi/pitaya/constants"
-	"github.com/tutumagi/pitaya/timer"
+	"github.com/tutumagi/pitaya/util"
 )
 
-type MyCond struct{}
+/////////////////////////////////////////////////////////
+//
+// app层的一些公共函数
+//
+/////////////////////////////////////////////////////////
 
-func (m *MyCond) Check(now time.Time) bool {
-	return false
-}
-
-func TestNewTimer(t *testing.T) {
-	t.Parallel()
-	tt := NewTimer(100*time.Millisecond, func() {})
-	assert.NotNil(t, tt)
-}
-
-func TestNewCountTimer(t *testing.T) {
-	t.Parallel()
-	tt := NewCountTimer(100*time.Millisecond, 10, func() {})
-	assert.NotNil(t, tt)
-}
-
-func TestNewAfterTimer(t *testing.T) {
-	t.Parallel()
-	tt := NewAfterTimer(100*time.Millisecond, func() {})
-	assert.NotNil(t, tt)
-}
-
-func TestNewCondTimer(t *testing.T) {
-	t.Parallel()
-	_, err := NewCondTimer(nil, func() {})
-	assert.EqualError(t, constants.ErrNilCondition, err.Error())
-
-	tt, err := NewCondTimer(&MyCond{}, func() {})
-	assert.NoError(t, err)
-	assert.NotNil(t, tt)
-}
-
-func TestSetTimerPrecision(t *testing.T) {
-	t.Parallel()
-	dur := 33 * time.Millisecond
-	SetTimerPrecision(dur)
-	assert.Equal(t, dur, timer.Precision)
-}
-
-func TestSetTimerBacklog(t *testing.T) {
-	backlog := 1 << 4
-	SetTimerBacklog(backlog)
+// pb序列化函数，暴露该上层业务使用
+func SerializeMessage(v interface{}) ([]byte, error) {
+	return util.SerializeOrRaw(app.serializer, v)
 }

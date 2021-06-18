@@ -18,19 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package app
 
 import (
-	"github.com/tutumagi/pitaya/util"
+	"github.com/tutumagi/pitaya/constants"
+	"github.com/tutumagi/pitaya/logger"
+	"github.com/tutumagi/pitaya/protos"
 )
 
-/////////////////////////////////////////////////////////
-//
-// app层的一些公共函数
-//
-/////////////////////////////////////////////////////////
+// SendKickToUsers sends kick to an user array
+func SendKickToUsers(uids []string, frontendType string) ([]string, error) {
+	if frontendType == "" {
+		return uids, constants.ErrFrontendTypeNotSpecified
+	}
 
-// pb序列化函数，暴露该上层业务使用
-func SerializeMessage(v interface{}) ([]byte, error) {
-	return util.SerializeOrRaw(app.serializer, v)
+	var notKickedUids []string
+
+	for _, uid := range uids {
+		if app.rpcClient != nil {
+			kick := &protos.KickMsg{UserId: uid}
+			if err := app.rpcClient.SendKick(uid, frontendType, kick); err != nil {
+				notKickedUids = append(notKickedUids, uid)
+				logger.Log.Errorf("RPCClient send kick error, UID=%d, SvType=%s, Error=%s", uid, frontendType, err.Error())
+			}
+		} else {
+			notKickedUids = append(notKickedUids, uid)
+		}
+
+	}
+
+	if len(notKickedUids) != 0 {
+		return notKickedUids, constants.ErrKickingUsers
+	}
+
+	return nil, nil
 }

@@ -18,45 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package gate
 
 import (
-	"context"
-
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
-	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/session"
+	"github.com/tutumagi/pitaya/util"
 )
 
-// SendKickToUsers sends kick to an user array
-func SendKickToUsers(uids []string, frontendType string) ([]string, error) {
-	if !app.server.Frontend && frontendType == "" {
-		return uids, constants.ErrFrontendTypeNotSpecified
+// SendPushToUsers sends a message to the given list of users
+func SendPushToUsers(route string, v interface{}, uids []string) ([]string, error) {
+	data, err := util.SerializeOrRaw(app.serializer, v)
+	if err != nil {
+		return uids, err
 	}
 
-	var notKickedUids []string
+	var notPushedUids []string
+
+	// logger.Log.Debugf("Type=PushToUsers Route=%s, Data=%+v, SvType=%s, #Users=%d", route, v, frontendType, len(uids))
+	// 注释by 涂飞
+	// logger.Log.Debugf("Type=PushToUsers Route=%s, SvType=%s, #Users=%d", route, frontendType, len(uids))
 
 	for _, uid := range uids {
 		if s := session.GetSessionByUID(uid); s != nil {
-			if err := s.Kick(context.Background()); err != nil {
-				notKickedUids = append(notKickedUids, uid)
-				logger.Log.Errorf("Session kick error, ID=%d, UID=%d, ERROR=%s", s.ID(), s.UID(), err.Error())
-			}
-		} else if app.rpcClient != nil {
-			kick := &protos.KickMsg{UserId: uid}
-			if err := app.rpcClient.SendKick(uid, frontendType, kick); err != nil {
-				notKickedUids = append(notKickedUids, uid)
-				logger.Log.Errorf("RPCClient send kick error, UID=%d, SvType=%s, Error=%s", uid, frontendType, err.Error())
+			if err := s.Push(route, data); err != nil {
+				notPushedUids = append(notPushedUids, uid)
+				logger.Log.Errorf("Session push message error, ID=%d, UID=%d, Error=%s",
+					s.ID(), s.UID(), err.Error())
 			}
 		} else {
-			notKickedUids = append(notKickedUids, uid)
+			notPushedUids = append(notPushedUids, uid)
 		}
-
 	}
 
-	if len(notKickedUids) != 0 {
-		return notKickedUids, constants.ErrKickingUsers
+	if len(notPushedUids) != 0 {
+		return notPushedUids, constants.ErrPushingToUsers
 	}
 
 	return nil, nil

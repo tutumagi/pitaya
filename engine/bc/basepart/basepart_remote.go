@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	"github.com/tutumagi/pitaya/logger"
 
-	"github.com/tutumagi/pitaya"
 	"github.com/tutumagi/pitaya/protos"
 	"go.uber.org/zap"
 )
@@ -102,7 +102,7 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 			sp.initCellServerID = req.CellServerID
 		}
 
-		err := pitaya.SendTo(context.TODO(),
+		err := app.SendTo(context.TODO(),
 			"",
 			"",
 			req.CellServerID,
@@ -120,7 +120,7 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 		}
 
 		// 通知 cellappmgr 场景已存在
-		err = pitaya.Send(context.TODO(),
+		err = app.Send(context.TODO(),
 			"",
 			"",
 			"cellmgrapp.spaceservice.docreatespaceifneednotify",
@@ -155,7 +155,7 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 
 // DestroyEntity 销毁实体
 func (r *Remote) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos.Response, error) {
-	// pitaya.GroupRemoveMember(ctx, groupName, req.Uid)
+	// app.GroupRemoveMember(ctx, groupName, req.Uid)
 
 	e := GetEntity(req.Label, req.Id)
 	if e != nil {
@@ -185,7 +185,7 @@ func (r *Remote) CreateEntity(ctx context.Context, req *protos.SEntityData) (*pr
 		req.EntityID,
 		attrs,
 	)
-	logger.Debugf("pitaya.handler Space::CreateEntity e = %+v", ent)
+	logger.Debugf("app.handler Space::CreateEntity e = %+v", ent)
 	if ent == nil {
 		logger.Warn("create entity in cell return nil", zap.String("req", req.String()))
 	} else {
@@ -225,7 +225,7 @@ func createBaseSpaceFromRemote(req *protos.CreateBaseSpaceReq) error {
 	}
 
 	logger.Infof("create cell space. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
-	err := pitaya.SendTo(context.TODO(),
+	err := app.SendTo(context.TODO(),
 		"",
 		"",
 		req.CellServerID,
@@ -248,6 +248,6 @@ func createBaseSpaceFromRemote(req *protos.CreateBaseSpaceReq) error {
 
 // TODO 为了避免循环引用，后面要考虑怎么弄这个
 func curServerID() string {
-	// return pitaya.GetServerID()
+	// return app.GetServerID()
 	return ""
 }

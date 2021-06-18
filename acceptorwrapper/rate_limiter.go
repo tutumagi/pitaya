@@ -24,7 +24,8 @@ import (
 	"container/list"
 	"time"
 
-	"github.com/tutumagi/pitaya"
+	"github.com/tutumagi/pitaya/engine/components/app"
+
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
@@ -82,7 +83,7 @@ func (r *RateLimiter) GetNextMessage() (msg []byte, err error) {
 		now := time.Now()
 		if r.shouldRateLimit(now) {
 			logger.Log.Errorf("Data=%s, Error=%s", msg, constants.ErrRateLimitExceeded)
-			metrics.ReportExceededRateLimiting(pitaya.GetMetricsReporters())
+			metrics.ReportExceededRateLimiting(app.GetMetricsReporters())
 			continue
 		}
 

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package pitaya
+package common
 
 import (
 	"fmt"
@@ -90,8 +90,8 @@ func alreadyRegistered(name string) error {
 	return nil
 }
 
-// startModules starts all modules in order
-func startModules() {
+// StartModules starts all modules in order
+func StartModules() {
 	logger.Log.Debug("initializing all modules")
 	for _, modWrapper := range modulesArr {
 		logger.Log.Debugf("initializing module: %s", modWrapper.name)
@@ -106,8 +106,8 @@ func startModules() {
 	}
 }
 
-// shutdownModules starts all modules in reverse order
-func shutdownModules() {
+// ShutdownModules starts all modules in reverse order
+func ShutdownModules() {
 	for i := len(modulesArr) - 1; i >= 0; i-- {
 		modulesArr[i].module.BeforeShutdown()
 	}

@@ -1,4 +1,4 @@
-package pitaya
+package gate
 
 import (
 	"context"
@@ -19,6 +19,9 @@ import (
 	"github.com/tutumagi/pitaya/constants"
 	pcontext "github.com/tutumagi/pitaya/context"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/common"
+	services "github.com/tutumagi/pitaya/engine/common"
+
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
@@ -30,6 +33,15 @@ import (
 	"github.com/tutumagi/pitaya/timer"
 	"github.com/tutumagi/pitaya/tracing"
 )
+
+const HandlerType = "handler"
+
+type unhandledMessage struct {
+	ctx   context.Context
+	agent *agent.Agent
+	route *route.Route
+	msg   *message.Message
+}
 
 type GateProcessor struct {
 	appDieChan      chan bool             // die channel app
@@ -49,9 +61,9 @@ type GateProcessor struct {
 	heartbeatTimeout   time.Duration
 	messagesBufferSize int
 
-	remote *RemoteService
+	remote *common.RemoteService
 
-	entityManager EntityManager
+	entityManager common.EntityManager
 	actorSystem   *actor.ActorSystem
 }
 
@@ -75,7 +87,7 @@ func NewGateProcessor(
 
 	system *actor.ActorSystem,
 ) *GateProcessor {
-	remote := NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
+	remote := services.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system)
 	p := &GateProcessor{
 		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
 		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
@@ -283,7 +295,7 @@ func (p GateProcessor) Dispatch(thread int) {
 
 		case rm := <-p.chRemoteProcess:
 			metrics.ReportMessageProcessDelayFromCtx(rm.ctx, p.metricsReporters, "remote")
-			p.remote.remoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
+			p.remote.RemoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
 
 			// 收到 rpc call/post 后，处理消息
 		// case rpcReq := <-p.remoteService.rpcServer.GetUnhandledRequestsChannel():
@@ -378,11 +390,11 @@ func (p GateProcessor) localProcess(ctx context.Context, a *agent.Agent, route *
 			err := a.Session.ResponseMID(ctx, mid, ret)
 			if err != nil {
 				tracing.FinishSpan(ctx, err)
-				metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
+				metrics.ReportTimingFromCtx(ctx, p.metricsReporters, common.HandlerType, err)
 			}
 		}
 	} else {
-		metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
+		metrics.ReportTimingFromCtx(ctx, p.metricsReporters, common.HandlerType, nil)
 		tracing.FinishSpan(ctx, err)
 	}
 }
