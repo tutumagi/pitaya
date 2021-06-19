@@ -56,12 +56,22 @@ func (em *_BaseEntityManager) del(e *Entity) {
 	}
 }
 
-func (em *_BaseEntityManager) get(typName string, id string) *Entity {
+func (em *_BaseEntityManager) get(id string, typName string) *Entity {
 	em.RLock()
 	defer em.RUnlock()
 
 	if m, ok := em.entitiesByType[typName]; ok {
 		return m.Get(id)
+	}
+	return nil
+}
+
+func (em *_BaseEntityManager) getPid(id string, typName string) *actor.PID {
+	em.RLock()
+	defer em.RUnlock()
+
+	if m, ok := em.entitiesByType[typName]; ok {
+		return m.Get(id).pid
 	}
 	return nil
 }
@@ -153,7 +163,7 @@ func (em *_BaseEntityManager) CreateEntity(
 
 // GetEntity get entity
 func GetEntity(typName string, id string) *Entity {
-	return baseEntManager.get(typName, id)
+	return baseEntManager.get(id, typName)
 }
 
 // GetEntitiesByType 根据实体类型获取实体map

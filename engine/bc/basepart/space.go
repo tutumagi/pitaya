@@ -389,7 +389,7 @@ func (s *Space) cellPartCreated() error {
 	// 		CellServerID: s.initCellServerID,
 	// 	},
 	// )
-	err = caller.SendService(
+	err = s.SendService(
 		context.TODO(),
 		"spaceservice",
 		"cellmgrapp.spaceservice.spaceloaded",

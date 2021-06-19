@@ -260,7 +260,7 @@ func (e *Entity) attrChanged() {
 
 		// erro := app.SendTo(context.TODO(), e.ID,
 		// 	e.TypName(), e.SpaceServerID(), "cellremote.updateattr", req)
-		erro := caller.SendServiceTo(context.TODO(), e.SpaceServerID(), "cellremote", "cellremote.updateattr", req)
+		erro := e.SendServiceTo(context.TODO(), e.SpaceServerID(), "cellremote", "cellremote.updateattr", req)
 		if erro != nil {
 			logger.Warn("send to cellapp update attr err", zap.String("entity", e.String()), zap.Error(erro))
 		}
@@ -406,7 +406,7 @@ func (e *Entity) NotifyCellMove(pos *math32.Vector3, yaw float32) {
 		},
 		Yaw: yaw,
 	}
-	if err := caller.SendServiceTo(
+	if err := e.SendServiceTo(
 		context.TODO(),
 		spaceServerID,
 		"spaceremote",
@@ -588,7 +588,7 @@ func (e *Entity) Destroy(reason ...int32) {
 
 	// 如果是在 base server destroy，通知对应的space 玩家离开了
 	if e.SpaceCreated() {
-		if erre := caller.SendServiceTo(
+		if erre := e.SendServiceTo(
 			context.Background(),
 			e.SpaceServerID(),
 			"cellremote",
@@ -787,7 +787,7 @@ func (e *Entity) LeaveSpace() error {
 	// 		Id:    e.ID,
 	// 		Label: e.TypName(),
 	// 	})
-	err := caller.CallServiceTo(
+	err := e.CallServiceTo(
 		context.TODO(),
 		e.SpaceServerID(),
 		"cellremote",
@@ -824,7 +824,7 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	// 请求进入场景
 	// err := app.Send(context.Background(), e.ID,
 	// 	e.TypName(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
-	err := caller.SendService(
+	err := e.SendService(
 		context.Background(),
 		"spaceservice",
 		"cellmgrapp.spaceservice.enterspace",
@@ -873,7 +873,7 @@ func (e *Entity) migrateToSpaceFromBase(spaceID string, spaceKind int32, pos mat
 	// 	"cellremote.enterspacefrombase",
 	// 	req,
 	// )
-	err := caller.SendServiceTo(
+	err := e.SendServiceTo(
 		context.TODO(),
 		e.SpaceServerID(),
 		"cellremote",

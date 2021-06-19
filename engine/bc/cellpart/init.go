@@ -12,10 +12,10 @@ var msgProcessor *metapart.EntityMsgProcessor
 var caller metapart.Caller
 
 func Init(
-	rootSystem *actor.ActorSystem,
+	appDieChan chan bool,
 	serializer serialize.Serializer,
-	remoteService *common.RemoteService,
-	caller metapart.Caller,
+	rootSystem *actor.ActorSystem,
+	remoteCaller common.EntityRemoteCaller,
 ) {
 	cellEntManager = newCellEntityManager(rootSystem)
 

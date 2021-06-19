@@ -85,8 +85,8 @@ func RegisterSpace(kind int32, spacePtrBase basepart.ISpace, spacePtrCell cellpa
 	return RegisterEntity(common.SpaceTypeName(kind), spacePtrBase, spacePtrCell, false)
 }
 
-func RegisterService(typName string, entityPtr basepart.IBaseEntity) *metapart.TypeDesc {
-	return RegisterEntity(common.ServiceTypeName(typName), entityPtr, nil, false)
+func RegisterService(serviceName string, entityPtr basepart.IBaseEntity) *metapart.TypeDesc {
+	return RegisterEntity(common.ServiceTypeName(serviceName), entityPtr, nil, false)
 }
 
 // 生成一个实体ID

@@ -9,18 +9,23 @@ import (
 
 var baseEntManager *_BaseEntityManager
 var msgProcessor *metapart.EntityMsgProcessor
-var caller metapart.Caller
+var caller *Caller
 
 func Init(
-	rootSystem *actor.ActorSystem,
+	appDieChan chan bool,
 	serializer serialize.Serializer,
-	remoteService *common.RemoteService,
-	caller metapart.Caller,
+	rootSystem *actor.ActorSystem,
+	remoteCaller common.EntityRemoteCaller,
 ) {
 	baseEntManager = newBaseEntityManager(rootSystem)
 
 	msgProcessor = metapart.NewEntityProcessor(
 		serializer,
 	)
-	caller = caller
+	caller = NewAppProcessor(
+		appDieChan,
+		serializer,
+		rootSystem,
+		remoteCaller,
+	)
 }

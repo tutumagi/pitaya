@@ -101,7 +101,7 @@ var (
 		packetDecoder:    codec.NewPomeloPacketDecoder(),
 		packetEncoder:    codec.NewPomeloPacketEncoder(),
 		metricsReporters: make([]metrics.Reporter, 0),
-		serverMode:       Standalone,
+		serverMode:       Cluster,
 		serializer:       json.NewSerializer(),
 		configured:       false,
 		running:          false,
@@ -132,7 +132,7 @@ func Configure(
 		app.heartbeat/time.Second,
 		2*app.heartbeat/time.Second)
 
-	app.server.Frontend = isFrontend
+	app.server.Frontend = false
 	app.server.Type = serverType
 	app.serverMode = serverMode
 	app.server.Metadata = serverMetadata
@@ -309,7 +309,7 @@ func Start() {
 		app.running = false
 	}()
 
-	sg := make(chan os.Signal)
+	sg := make(chan os.Signal, 1)
 	signal.Notify(sg, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 
 	// stop server
@@ -344,8 +344,4 @@ func listen() {
 	logger.Log.Info("all modules started!")
 
 	app.running = true
-}
-
-func isCluster() bool {
-	return app.serverMode == Cluster
 }

@@ -2,24 +2,20 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	"strings"
 
 	"github.com/spf13/viper"
-	"github.com/tutumagi/pitaya"
+
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/engine/bc"
 	"github.com/tutumagi/pitaya/engine/bc/basepart"
-	"github.com/tutumagi/pitaya/engine/bc/metapart"
+	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/groups"
-	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/serialize/json"
 	"github.com/tutumagi/pitaya/timer"
 )
@@ -28,7 +24,7 @@ type (
 	// Room represents a component that contains a bundle of room related handler
 	// like Join/Message
 	Room struct {
-		component.Base
+		basepart.Entity
 		timer *timer.Timer
 	}
 
@@ -55,69 +51,16 @@ type (
 	}
 )
 
-// NewRoom returns a Handler Base implementation
-func NewRoom() *Room {
-	return &Room{}
-}
-
-type RoomService struct {
-	basepart.Entity
-}
-
-// AfterInit component lifetime callback
-func (r *Room) AfterInit() {
-	r.timer = pitaya.NewTimer(time.Minute, func() {
-		count, err := pitaya.GroupCountMembers(context.Background(), "room")
-		logger.Log.Debugf("UserCount: Time=> %s, Count=> %d, Error=> %q", time.Now().String(), count, err)
-	})
-}
-
-// Join room
-func (r *Room) Join(ctx context.Context, msg []byte) (*JoinResponse, error) {
-	s := pitaya.GetSessionFromCtx(ctx)
-	fakeUID := s.ID()                              // just use s.ID as uid !!!
-	err := s.Bind(ctx, strconv.Itoa(int(fakeUID))) // binding session uid
-
-	if err != nil {
-		return nil, pitaya.Error(err, "RH-000", map[string]string{"failed": "bind"})
-	}
-
-	uids, err := pitaya.GroupMembers(ctx, "room")
-	if err != nil {
-		return nil, err
-	}
-	s.Push("onMembers", &AllMembers{Members: uids})
-	// notify others
-	pitaya.GroupBroadcast(ctx, "chat", "room", "onNewUser", &NewUser{Content: fmt.Sprintf("New user: %s", s.UID())})
-	// new user join group
-	pitaya.GroupAddMember(ctx, "room", s.UID()) // add session to group
-
-	// on session close, remove it from group
-	s.OnClose(func() {
-		pitaya.GroupRemoveMember(ctx, "room", s.UID())
-	})
-
-	return &JoinResponse{Result: "success"}, nil
-}
-
-// Message sync last message to all members
-func (r *Room) Message(ctx context.Context, msg *UserMessage) {
-	err := pitaya.GroupBroadcast(ctx, "chat", "room", "onMessage", msg)
-	if err != nil {
-		fmt.Println("error broadcasting message", err)
-	}
-}
-
 func main() {
-	defer pitaya.Shutdown()
+	defer app.Shutdown()
 
 	s := json.NewSerializer()
 	conf := configApp()
 
-	pitaya.SetSerializer(s)
+	app.SetSerializer(s)
 	gsi := groups.NewMemoryGroupService(config.NewConfig(conf))
-	pitaya.InitGroups(gsi)
-	err := pitaya.GroupCreate(context.Background(), "room")
+	app.InitGroups(gsi)
+	err := app.GroupCreate(context.Background(), "room")
 	if err != nil {
 		panic(err)
 	}
@@ -131,29 +74,25 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.Llongfile)
 
-	ee := basepart.CreateService("room", "")
-	roomService := ee.Val().(*RoomService)
-
-	pitaya.RegisterEntryService("room")
-	pitaya.RegisterPlayerService(metapart.TypNamePlayer)
+	_ = basepart.CreateService("room")
 
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	go http.ListenAndServe(":3251", nil)
 
 	t := acceptor.NewWSAcceptor(":3250")
-	pitaya.AddAcceptor(t)
+	app.AddAcceptor(t)
 
-	pitaya.Configure(true, "chat", pitaya.Cluster, map[string]string{}, conf)
-	pitaya.Start()
+	app.Configure(true, "chat", app.Cluster, map[string]string{}, conf)
+	app.Start()
 }
 
 func configApp() *viper.Viper {
 	conf := viper.New()
 	conf.SetEnvPrefix("chat") // allows using env vars in the CHAT_PITAYA_ format
-	conf.SetDefault("pitaya.buffer.handler.localprocess", 15)
-	conf.Set("pitaya.heartbeat.interval", "15s")
-	conf.Set("pitaya.buffer.agent.messages", 32)
-	conf.Set("pitaya.handler.messages.compression", false)
+	conf.SetDefault("app.buffer.handler.localprocess", 15)
+	conf.Set("app.heartbeat.interval", "15s")
+	conf.Set("app.buffer.agent.messages", 32)
+	conf.Set("app.handler.messages.compression", false)
 	return conf
 }

@@ -205,6 +205,8 @@ func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
 		// 连接连成功了
 		// a.ownerEntityID
 		// RPC(context.TODO(), )
+		// bootEntityID :=
+		// h.remote.Call()
 	case packet.Data:
 		if a.GetStatus() < constants.StatusWorking {
 			return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",

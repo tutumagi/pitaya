@@ -17,8 +17,10 @@ type Remote struct {
 	Entity
 }
 
+type RemoteCaller struct{}
+
 // DoEnterSpace 玩家进入场景，当cellmgrapp 拿到 场景服的地址后 通知过来的
-func (r *Remote) DoEnterSpace(ctx context.Context, req *protos.RealEnterSpaceReq) (*protos.Response, error) {
+func (r *RemoteCaller) DoEnterSpace(ctx context.Context, req *protos.RealEnterSpaceReq) (*protos.Response, error) {
 	logger.Debug("entity remote do enterspace", zap.String("req", req.String()))
 
 	if req.EntityID == "" || req.SpaceID == "" {
@@ -46,7 +48,7 @@ func (r *Remote) DoEnterSpace(ctx context.Context, req *protos.RealEnterSpaceReq
 }
 
 // EnterSpaceResult 玩家进入场景后的处理，这里主要处理 base 的 实体相关的空间记录
-func (r *Remote) EnterSpaceResult(ctx context.Context, req *protos.EnterSpaceResultNotify) (*protos.Response, error) {
+func (r *RemoteCaller) EnterSpaceResult(ctx context.Context, req *protos.EnterSpaceResultNotify) (*protos.Response, error) {
 	logger.Infof("entity enter space result %s", req.String())
 
 	e := GetEntity(req.EntityLabel, req.EntityID)
@@ -62,11 +64,12 @@ func (r *Remote) EnterSpaceResult(ctx context.Context, req *protos.EnterSpaceRes
 }
 
 // CreateBaseSpaces  在 baseapp 上创建空间
-func (r *Remote) CreateBaseSpace(
+func (r *RemoteCaller) CreateBaseSpace(
 	ctx context.Context,
+	entity interface{},
 	req *protos.CreateBaseSpaceReq,
 ) (*protos.Response, error) {
-	err := createBaseSpaceFromRemote(req)
+	err := r.createBaseSpaceFromRemote(entity, req)
 	if err != nil {
 		return nil, err
 	}
@@ -76,18 +79,19 @@ func (r *Remote) CreateBaseSpace(
 
 // CreateBaseSpaces  在 baseapp 上创建空间(新增这个协议是为了不影响之前的流程)
 // 主要用于解决base、cell 和 cellmgr 之间的启动依赖。
-func (r *Remote) CreateBaseSpaceIfNeed(
+func (r *RemoteCaller) CreateBaseSpaceIfNeed(
 	ctx context.Context,
+	entity interface{},
 	req *protos.CreateBaseSpaceReq,
 ) (*protos.Response, error) {
-
+	caller := entity.(*Remote)
 	logger.Infof("CreateBaseSpaceIfNeed, req=%+v", req)
 
 	//判断 MasterSpace是否已经存在
 	// assert(req.SpaceID == define.MasterSpaceID)
 	sp := GetSpace(req.SpaceID) //GetSpace(define.MasterSpaceID)
 	if sp == nil {
-		err := createBaseSpaceFromRemote(req)
+		err := r.createBaseSpaceFromRemote(entity, req)
 		if err != nil {
 			logger.Errorf("createBaseSpaceFromRemote failed. id:%s kind:%d cellServerID:%s err:%s", req.SpaceID, req.SpaceKind, req.CellServerID, err)
 			return nil, err
@@ -177,7 +181,7 @@ func (r *Remote) CreateBaseSpaceIfNeed(
 // }
 
 // DestroyEntity 销毁实体
-func (r *Remote) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos.Response, error) {
+func (r *RemoteCaller) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos.Response, error) {
 	// app.GroupRemoveMember(ctx, groupName, req.Uid)
 
 	e := GetEntity(req.Label, req.Id)
@@ -190,7 +194,7 @@ func (r *Remote) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos
 	return &protos.Response{}, nil
 }
 
-func (r *Remote) CreateEntity(ctx context.Context, req *protos.SEntityData) (*protos.Response, error) {
+func (r *RemoteCaller) CreateEntity(ctx context.Context, req *protos.SEntityData) (*protos.Response, error) {
 	ent := GetEntity(req.EntityLabel, req.EntityID)
 
 	// 如果该Server 没有该实体， 则拿到迁移数据进行 重建实体，这里重建实体不包括timer，只包括数据
@@ -225,7 +229,7 @@ func (r *Remote) CreateEntity(ctx context.Context, req *protos.SEntityData) (*pr
 	return &protos.Response{}, nil
 }
 
-// func (r *Remote) ClientConnected(ctx context.Context, req *protos.ClientConnect) (*protos.Response, error) {
+// func (r *RemoteCaller) ClientConnected(ctx context.Context, req *protos.ClientConnect) (*protos.Response, error) {
 
 // 	// client := agent.NewRemote(
 // 	// 	req.Sess,
@@ -233,7 +237,8 @@ func (r *Remote) CreateEntity(ctx context.Context, req *protos.SEntityData) (*pr
 // 	// )
 // }
 
-func createBaseSpaceFromRemote(req *protos.CreateBaseSpaceReq) error {
+func (r *RemoteCaller) createBaseSpaceFromRemote(entity interface{}, req *protos.CreateBaseSpaceReq) error {
+	caller := entity.(*Entity)
 	logger.Infof("create base space. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
 	space := CreateSpace(req.SpaceKind, req.SpaceID, req.CellServerID)
 	logger.Infof("create base and cell space success. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
