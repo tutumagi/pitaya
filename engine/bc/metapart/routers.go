@@ -40,16 +40,12 @@ type (
 
 		handlers map[string]*component.Handler // all handler method
 		remotes  map[string]*component.Remote  // all remote method
-
-		server *cluster.Server
 	}
 )
 
 // NewRouters creates and returns a new handler service
-func NewRouters(server *cluster.Server) *Routers {
+func NewRouters() *Routers {
 	h := &Routers{
-		server: server,
-
 		handlerServices: make(map[string]*component.Service),
 		remoteServices:  make(map[string]*component.Service),
 
@@ -130,34 +126,34 @@ func (h *Routers) DumpServices() {
 }
 
 // Docs returns documentation for handlers
-func (h *Routers) docsHandler(getPtrNames bool) (map[string]interface{}, error) {
+func (h *Routers) docsHandler(server *cluster.Server, getPtrNames bool) (map[string]interface{}, error) {
 	if h == nil {
 		return map[string]interface{}{}, nil
 	}
-	return docgenerator.HandlersDocs(h.server.Type, h.handlerServices, getPtrNames)
+	return docgenerator.HandlersDocs(server.Type, h.handlerServices, getPtrNames)
 }
 
 // Docs returns documentation for remotes
-func (h *Routers) docsRemote(getPtrNames bool) (map[string]interface{}, error) {
+func (h *Routers) docsRemote(server *cluster.Server, getPtrNames bool) (map[string]interface{}, error) {
 	if h == nil {
 		return map[string]interface{}{}, nil
 	}
-	return docgenerator.RemotesDocs(h.server.Type, h.remoteServices, getPtrNames)
+	return docgenerator.RemotesDocs(server.Type, h.remoteServices, getPtrNames)
 }
 
-func Documents(getPtrNames bool) (map[string]interface{}, error) {
+func Documents(server *cluster.Server, getPtrNames bool) (map[string]interface{}, error) {
 	handlerDocs := make(map[string]interface{})
 	remoteDocs := make(map[string]interface{})
 	for typName, desc := range registerEntityTypes {
 		_ = typName
-		tmp, err := desc.Routers.docsHandler(getPtrNames)
+		tmp, err := desc.Routers.docsHandler(server, getPtrNames)
 		if err != nil {
 			return nil, err
 		}
 		for k, v := range tmp {
 			handlerDocs[k] = v
 		}
-		tmp, err = desc.Routers.docsRemote(getPtrNames)
+		tmp, err = desc.Routers.docsRemote(server, getPtrNames)
 		if err != nil {
 			return nil, err
 		}

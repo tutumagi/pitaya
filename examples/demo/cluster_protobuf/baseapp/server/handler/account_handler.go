@@ -14,7 +14,7 @@ type AccountHandler struct {
 }
 
 // Join room
-func (r *AccountHandler) Join(ctx context.Context, ent interface{}, msg []byte) (*protos.Response, error) {
+func (r *AccountHandler) Join(ctx context.Context, ent interface{}, msg []byte) (*protos.ResponseV2, error) {
 	player := ent.(*entity.Account)
 
 	player.ID = metapart.NewUUID()
@@ -26,7 +26,7 @@ func (r *AccountHandler) Join(ctx context.Context, ent interface{}, msg []byte) 
 	// }
 
 	// return rsp, nil
-	return &protos.Response{Msg: "ack"}, nil
+	return &protos.ResponseV2{Msg: "ack"}, nil
 }
 
 // Message sync last message to all members

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
-	"gitlab.gamesword.com/nut/dreamcity/game/define"
 	"go.uber.org/zap"
 
 	"github.com/tutumagi/pitaya/timer"
@@ -86,7 +86,7 @@ func (s *Space) OnDestroy() {
 func (s *Space) onSpaceCreated() {
 	spaceManager.putSpace(s)
 
-	if s.kind == define.MasterSpaceKind {
+	if s.kind == metapart.MasterSpaceKind {
 		logger.Infof("create master space success count:%d", s.entities.Count())
 	}
 	s.AddCallback(func() {
@@ -214,7 +214,7 @@ func (s *Space) PrepareCellData() map[string]string {
 // // 通知实体已经进入到场景
 // func (s *Space) notifyEntityEnterSpaceResult(e *BaseEntity) {
 // 	// TODO 这里只通知玩家进入场景，可以考虑用依赖反转，给具体实体控制是否需要通知回业务 app
-// 	if e.TypName() != define.TypNamePlayer {
+// 	if e.TypName() != metapart.TypNamePlayer {
 // 		return
 // 	}
 // 	msg := &pb.EnterSpaceResultNotify{

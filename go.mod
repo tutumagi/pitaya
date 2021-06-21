@@ -36,7 +36,7 @@ require (
 	github.com/tutumagi/go-workers v1.1.0
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	gitlab.gamesword.com/nut/dreamcity v0.0.2
+	gitlab.gamesword.com/nut/dreamcity v0.0.2 // indirect
 	gitlab.gamesword.com/nut/entitygen v0.0.0-20210318084826-f7b3d1b17db6
 	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0

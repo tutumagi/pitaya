@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/logger"
-	"gitlab.gamesword.com/nut/dreamcity/game/define"
 
 	"github.com/spf13/viper"
 )
@@ -149,9 +149,9 @@ func SetFromRedis(para QueryPara, resVal interface{}) (err error) {
 	if gDbMgr.UseRedis && gDbMgr.Redis != nil {
 		err = gDbMgr.Redis.Set(para, resVal)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ERROR_LOG, `SetFromRedis:{para:%+v, val:%+v, error:%+v}`, para, resVal, err)
+			logger.DayLogRecord(metapart.DB_ERROR_LOG, `SetFromRedis:{para:%+v, val:%+v, error:%+v}`, para, resVal, err)
 		} else {
-			logger.DayLogRecord(define.DB_SUCC_LOG, `SetFromRedis:{para:%+v, val:%+v}`, para, resVal)
+			logger.DayLogRecord(metapart.DB_SUCC_LOG, `SetFromRedis:{para:%+v, val:%+v}`, para, resVal)
 		}
 		return
 	}
@@ -165,9 +165,9 @@ func DelFromRedis(para QueryPara) (err error) {
 	if gDbMgr.UseRedis && gDbMgr.Redis != nil {
 		err = gDbMgr.Redis.Del(para)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ERROR_LOG, `DelFromRedis:{para:%+v, error:%+v}`, para, err)
+			logger.DayLogRecord(metapart.DB_ERROR_LOG, `DelFromRedis:{para:%+v, error:%+v}`, para, err)
 		} else {
-			logger.DayLogRecord(define.DB_SUCC_LOG, `DelFromRedis:{para:%+v}`, para)
+			logger.DayLogRecord(metapart.DB_SUCC_LOG, `DelFromRedis:{para:%+v}`, para)
 		}
 		return
 	}
@@ -180,9 +180,9 @@ func SyncDataToRedis(para QueryPara, val interface{}) (err error) {
 	if gDbMgr.UseRedis && gDbMgr.Redis != nil {
 		err = gDbMgr.Redis.SyncData(para, val)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ERROR_LOG, `SyncDataToRedis:{para:%+v, val:%+v, error:%+v}`, para, val, err)
+			logger.DayLogRecord(metapart.DB_ERROR_LOG, `SyncDataToRedis:{para:%+v, val:%+v, error:%+v}`, para, val, err)
 		} else {
-			logger.DayLogRecord(define.DB_SUCC_LOG, `SyncDataToRedis:{para:%+v, val:%+v}`, para, val)
+			logger.DayLogRecord(metapart.DB_SUCC_LOG, `SyncDataToRedis:{para:%+v, val:%+v}`, para, val)
 		}
 	}
 	err = fmt.Errorf("dbmgr::SyncDataToRedis error, not set use redis......")
@@ -204,9 +204,9 @@ func SetFromMongo(para QueryPara, resVal interface{}) (err error) {
 	if gDbMgr.UseMongo && gDbMgr.Mongo != nil {
 		err = gDbMgr.Mongo.Set(para, resVal)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ERROR_LOG, `SetFromMongo:{para:%+v, val:%+v, error:%+v}`, para, resVal, err)
+			logger.DayLogRecord(metapart.DB_ERROR_LOG, `SetFromMongo:{para:%+v, val:%+v, error:%+v}`, para, resVal, err)
 		} else {
-			logger.DayLogRecord(define.DB_SUCC_LOG, `SetFromMongo:{para:%+v, val:%+v}`, para, resVal)
+			logger.DayLogRecord(metapart.DB_SUCC_LOG, `SetFromMongo:{para:%+v, val:%+v}`, para, resVal)
 		}
 		return
 	}
@@ -219,9 +219,9 @@ func DelFromMongo(para QueryPara) (err error) {
 	if gDbMgr.UseMongo && gDbMgr.Mongo != nil {
 		err = gDbMgr.Mongo.Del(para)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ERROR_LOG, `DelFromMongo:{para:%+v, error:%+v}`, para, err)
+			logger.DayLogRecord(metapart.DB_ERROR_LOG, `DelFromMongo:{para:%+v, error:%+v}`, para, err)
 		} else {
-			logger.DayLogRecord(define.DB_SUCC_LOG, `DelFromMongo:{para:%+v}`, para)
+			logger.DayLogRecord(metapart.DB_SUCC_LOG, `DelFromMongo:{para:%+v}`, para)
 		}
 		return
 	}
@@ -277,7 +277,7 @@ func PublishMsg(opt uint, para QueryPara, val interface{}) (err error) {
 		}
 		err = gDbMgr.NatsStream.PublishMsg(msg)
 		if err != nil { //记录错误日志
-			logger.DayLogRecord(define.DB_ASYNC_ERROR_LOG, "PublishMsg:%+v", msg)
+			logger.DayLogRecord(metapart.DB_ASYNC_ERROR_LOG, "PublishMsg:%+v", msg)
 		}
 		return
 	}

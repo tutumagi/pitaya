@@ -57,7 +57,7 @@ type Entity struct {
 
 	yaw float32
 
-	Viewlayer define.ViewLayer // 视野类型
+	Viewlayer metapart.ViewLayer // 视野类型
 	coord     *aoi.EntityCoord
 	witness   *aoi.Witness
 
@@ -289,7 +289,7 @@ func (e *Entity) SpaceID() string {
 // SpaceKind 返回实体所在的spaceKind
 func (e *Entity) SpaceKind() int32 {
 	if !e.SpaceCreated() {
-		return define.NilSpaceKind
+		return metapart.NilSpaceKind
 	}
 	if svrConfig.curServerUseSpace {
 		return e.space.Kind()
@@ -580,7 +580,7 @@ func (e *Entity) saveToDB() {
 	}
 
 	req := dbmgr.QueryPara{
-		TblName: define.EntityTableName(e.typeDesc.name),
+		TblName: metapart.EntityTableName(e.typeDesc.name),
 		KeyName: "id",
 		Key:     e.ID,
 	}
@@ -600,7 +600,7 @@ func (e *Entity) Destroy(reason ...int32) {
 		return
 	}
 
-	if e.typeDesc.name == define.TypNamePlayer {
+	if e.typeDesc.name == metapart.TypNamePlayer {
 		logger.Debugf("%s destroy...%v", e, reason)
 	}
 
@@ -766,7 +766,7 @@ func (e *Entity) PrepareEnterSpace(spaceID string, spaceKind int32, pos math32.V
 	if e.isEnteringSpace() {
 		logger.Warnf("%s is entering space %s, cannot enter space %s", e, e.enteringSpaceRequest.SpaceID, spaceID)
 		// e.I.OnEnterSpace()
-		e.PushEnterSceneErrorIfNeed(define.ErrEnteringSpace)
+		e.PushEnterSceneErrorIfNeed(metapart.ErrEnteringSpace)
 		return
 	}
 	// 这个不会触发 positionChanged的回调
@@ -790,7 +790,7 @@ func (e *Entity) LeaveSpace() error {
 	if e.isEnteringSpace() {
 		logger.Warnf("%s is entering space %s, prepare cancel enter %s", e, e.enteringSpaceRequest.SpaceID, e.SpaceID())
 
-		return define.ErrEnteringSpace
+		return metapart.ErrEnteringSpace
 	}
 	// 如果玩家不在任何一个场景里面，则返回 nil
 	if !e.SpaceCreated() {
@@ -833,7 +833,7 @@ func (e *Entity) enterLocalSpace(space *Space, pos math32.Vector3, viewLayer int
 		if e.BaseServerID() != "" && e.BaseServerID() != space.BaseServerID() {
 			logger.Warnf("%s already in space %s, but 。。。", e, space)
 		} else {
-			e.PushEnterSceneErrorIfNeed(define.ErrAlreadyInSpace)
+			e.PushEnterSceneErrorIfNeed(metapart.ErrAlreadyInSpace)
 			return
 		}
 	}
@@ -850,7 +850,7 @@ func (e *Entity) enterLocalSpace(space *Space, pos math32.Vector3, viewLayer int
 	e.cancelEnterSpace()
 	if space.IsDestroyed() {
 		logger.Warnf("entity enter space, but space is destroyed, enter space fail", zap.String("entity", e.String()), zap.String("space", space.String()))
-		e.PushEnterSceneErrorIfNeed(define.ErrSpaceDestroyed)
+		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceDestroyed)
 		return
 	}
 
@@ -894,7 +894,7 @@ func (e *Entity) requestMigrateTo(spaceID string, spaceKind int32, pos math32.Ve
 	err := pitaya.Send(context.Background(), "cellmgrapp.spaceservice.enterspace", e.enteringSpaceRequest)
 	if err != nil {
 		logger.Errorf("%s enter space(%s) err(%s)", e, spaceID, err)
-		e.PushEnterSceneErrorIfNeed(define.ErrSpaceRequestFailed)
+		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)
 	}
 }
 
@@ -903,9 +903,9 @@ func (e *Entity) PushEnterSceneErrorIfNeed(eee error) {
 		logger.Errorf("push enter space err. entity:%s err:%s", e, eee)
 		retErr, ok := eee.(*err.Error)
 		if !ok {
-			retErr = define.ErrSpaceUnknown(eee)
+			retErr = metapart.ErrSpaceUnknown(eee)
 		}
-		e.PushOwnClient(define.RouterAvatarEnterScene, &pb.RspEnter{
+		e.PushOwnClient(metapart.RouterAvatarEnterScene, &pb.RspEnter{
 			Code: retErr.Code,
 			Msg:  retErr.Message,
 		})
@@ -936,7 +936,7 @@ func (e *Entity) migrateToSpaceFromBase(spaceID string, spaceKind int32, pos mat
 	)
 	if err != nil {
 		logger.Warn("call enterspace err", zap.String("req", req.String()), zap.Error(err))
-		e.PushEnterSceneErrorIfNeed(define.ErrSpaceRequestFailed)
+		e.PushEnterSceneErrorIfNeed(metapart.ErrSpaceRequestFailed)
 	}
 
 	e.resetEnterSpaceRequest()
@@ -958,7 +958,7 @@ func (e *Entity) MigrateToSpaceFromCell(spaceID string, spaceKind int32, pos mat
 			zap.Int32("spaceKind", spaceKind),
 			zap.Any("spaces", spaceManager.spaces))
 		// TODO 这里需要通知该实体 进入场景失败
-		e.PushEnterSceneErrorIfNeed(define.ErrFindSpace(spaceID))
+		e.PushEnterSceneErrorIfNeed(metapart.ErrFindSpace(spaceID))
 	}
 }
 
@@ -1025,7 +1025,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 	if e.UID == "" {
 		return
 	}
-	_, err := pitaya.SendPushToUsers(router, msg, []string{e.UID}, define.GateAppSvr)
+	_, err := pitaya.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
 	if err != nil {
 		logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
 	}
@@ -1044,12 +1044,12 @@ func (e *Entity) PushNeighbourClient(router string, msg interface{}) {
 	}
 	for entityer := range e.witness.InterestedBy {
 		other := entityer.(*Entity)
-		if other.typeDesc.name == define.TypNamePlayer {
+		if other.typeDesc.name == metapart.TypNamePlayer {
 			if other.UID == "" {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			_, err := pitaya.SendPushToUsers(router, msg, []string{other.UID}, define.GateAppSvr)
+			_, err := pitaya.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
 			if err != nil {
 				logger.Errorf("push neighbour client(uid:%s) err:%s", other.UID, err)
 			}
@@ -1104,12 +1104,12 @@ func (e *Entity) PushInterestin(router string, msg interface{}) {
 	}
 	for entityer := range e.witness.InterestIn {
 		other := entityer.(*Entity)
-		if other.typeDesc.name == define.TypNamePlayer {
+		if other.typeDesc.name == metapart.TypNamePlayer {
 			if other.UID == "" {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			pitaya.SendPushToUsers(router, msg, []string{other.UID}, define.BaseAppSrv)
+			pitaya.SendPushToUsers(router, msg, []string{other.UID}, metapart.BaseAppSrv)
 		}
 	}
 }

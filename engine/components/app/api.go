@@ -216,7 +216,7 @@ func ExtractSpan(ctx context.Context) (opentracing.SpanContext, error) {
 // Documentation returns handler and remotes documentacion
 func Documentation(getPtrNames bool) (map[string]interface{}, error) {
 
-	return metapart.Documents(getPtrNames)
+	return metapart.Documents(app.server, getPtrNames)
 	// handlerDocs, err := handlerService.DocsHandler(getPtrNames)
 	// if err != nil {
 	// 	return nil, err

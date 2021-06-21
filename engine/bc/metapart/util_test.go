@@ -66,7 +66,7 @@ func (t *TestType) HandlerPointerErr(ctx context.Context, entity interface{}, ss
 }
 
 func TestGetHandlerExists(t *testing.T) {
-	routers := NewRouters(nil)
+	routers := NewRouters()
 
 	rt := route.NewRoute("", uuid.New().String(), uuid.New().String())
 	expected := &component.Handler{}
@@ -79,7 +79,7 @@ func TestGetHandlerExists(t *testing.T) {
 }
 
 func TestGetHandlerDoesntExist(t *testing.T) {
-	routers := NewRouters(nil)
+	routers := NewRouters()
 
 	rt := route.NewRoute("", uuid.New().String(), uuid.New().String())
 	h, err := routers.getHandler(rt)
@@ -336,7 +336,7 @@ func TestSerializeReturn(t *testing.T) {
 }
 
 func TestProcessHandlerMessage(t *testing.T) {
-	routers := NewRouters(nil)
+	routers := NewRouters()
 
 	tObj := &TestType{}
 
@@ -419,7 +419,7 @@ func TestProcessHandlerMessage(t *testing.T) {
 }
 
 func TestProcessHandlerMessageBrokenBeforePipeline(t *testing.T) {
-	routers := NewRouters(nil)
+	routers := NewRouters()
 
 	rt := route.NewRoute("", uuid.New().String(), uuid.New().String())
 	routers.handlers[rt.Short()] = &component.Handler{}
@@ -448,7 +448,7 @@ func TestProcessHandlerMessageBrokenBeforePipeline(t *testing.T) {
 }
 
 func TestProcessHandlerMessageBrokenAfterPipeline(t *testing.T) {
-	routers := NewRouters(nil)
+	routers := NewRouters()
 
 	tObj := &TestType{}
 	m, ok := reflect.TypeOf(tObj).MethodByName("HandlerPointerRaw")

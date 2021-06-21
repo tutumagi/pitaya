@@ -9,7 +9,6 @@ import (
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/dbmgr"
 	"github.com/tutumagi/pitaya/logger"
-	"gitlab.gamesword.com/nut/dreamcity/game/define"
 	"gitlab.gamesword.com/nut/entitygen/attr"
 	"go.uber.org/zap"
 )
@@ -255,7 +254,7 @@ func createBaseEntityOnlyInit(
 // LoadEntity 加载实体
 func LoadEntity(typName string, entityID string) (*Entity, error) {
 	param := dbmgr.QueryPara{
-		TblName: define.EntityTableName(typName),
+		TblName: metapart.EntityTableName(typName),
 		KeyName: "id",
 		Key:     entityID,
 	}
@@ -321,7 +320,7 @@ func LoadFilterEntity(typName string, queryFilter dbmgr.QueryPara) (*Entity, err
 	if typDesc == nil {
 		logger.Warn("entity type not register", zap.String("typName", typName))
 		// TODO 通知 加载entity 失败了
-		return nil, define.ErrEntityNotRegister
+		return nil, metapart.ErrEntityNotRegister
 	}
 
 	_ = typDesc
@@ -332,7 +331,7 @@ func LoadFilterEntity(typName string, queryFilter dbmgr.QueryPara) (*Entity, err
 		// 是空数据的错误，不打印日志
 		if err != dbmgr.ErrDataEmpty {
 			logger.Error("load entity from db err", zap.String("typName", typName), zap.Any("query", queryFilter), zap.Error(err))
-			return nil, define.ErrLoadDB
+			return nil, metapart.ErrLoadDB
 		}
 		return nil, nil
 	}
@@ -356,7 +355,7 @@ func LoadTypeModelFromDB(typName string, param dbmgr.QueryPara) (interface{}, er
 	if typDesc == nil {
 		logger.Warn("entity type not register", zap.String("typName", typName))
 		// TODO 通知 加载entity 失败了
-		return nil, define.ErrEntityNotRegister
+		return nil, metapart.ErrEntityNotRegister
 	}
 
 	_ = typDesc
@@ -367,7 +366,7 @@ func LoadTypeModelFromDB(typName string, param dbmgr.QueryPara) (interface{}, er
 		// 是空数据的错误，不打印日志
 		if err != dbmgr.ErrDataEmpty {
 			logger.Warnf("load entity from db err", zap.String("typName", typName), zap.Any("query", param), zap.Error(err))
-			return nil, define.ErrLoadDB
+			return nil, metapart.ErrLoadDB
 		}
 		return nil, nil
 	}

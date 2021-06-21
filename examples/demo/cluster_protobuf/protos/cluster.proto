@@ -1,9 +1,10 @@
 syntax = "proto3";
 
 package protos;
+option go_package = "/protos";
 
 // Response represents a rpc message
-message Response {
+message ResponseV2 {
   int32 Code = 1;
   string Msg = 2;
 }
@@ -15,11 +16,11 @@ message UserMessage {
 }
 
 // NewUser message will be received when new user join room
-message NewUser{
+message NewUser {
   string Content = 1;
 }
 
-message RPCMsg{
+message RPCMsg {
   string Route = 1;
   string Msg = 2;
 }

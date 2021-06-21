@@ -20,7 +20,6 @@ import (
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/timer"
-	"gitlab.gamesword.com/nut/dreamcity/game/define"
 	"gitlab.gamesword.com/nut/entitygen/attr"
 	"go.uber.org/zap"
 )
@@ -372,7 +371,7 @@ func (e *Entity) SpaceID() string {
 // SpaceKind 返回实体所在的spaceKind
 func (e *Entity) SpaceKind() int32 {
 	if !e.SpaceCreated() {
-		return define.NilSpaceKind
+		return metapart.NilSpaceKind
 	}
 
 	return e.baseSpace.Kind
@@ -560,7 +559,7 @@ func (e *Entity) saveToDB() {
 	}
 
 	req := dbmgr.QueryPara{
-		TblName: define.EntityTableName(e.TypName()),
+		TblName: metapart.EntityTableName(e.TypName()),
 		KeyName: "id",
 		Key:     e.ID,
 	}
@@ -580,7 +579,7 @@ func (e *Entity) Destroy(reason ...int32) {
 		return
 	}
 
-	if e.typeDesc.TypName() == define.TypNamePlayer {
+	if e.typeDesc.TypName() == metapart.TypNamePlayer {
 		logger.Debugf("%s destroy...%v", e, reason)
 	}
 
@@ -846,7 +845,7 @@ func (e *Entity) PushEnterSceneErrorIfNeed(eee error) {
 		if !ok {
 			retErr = metapart.ErrSpaceUnknown(eee)
 		}
-		e.PushOwnClient(define.RouterAvatarEnterScene, &protos.RspEnter{
+		e.PushOwnClient(metapart.RouterAvatarEnterScene, &protos.RspEnter{
 			Code: retErr.Code,
 			Msg:  retErr.Message,
 		})

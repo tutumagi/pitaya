@@ -86,16 +86,16 @@ package bc
 // }
 
 // func getFreeBaseServer() (*cluster.Server, error) {
-// 	servers, err := pitaya.GetServersByType(define.BaseAppSrv)
+// 	servers, err := pitaya.GetServersByType(metapart.BaseAppSrv)
 // 	if err != nil {
 // 		return nil, err
 // 	}
 
 // 	for _, s := range servers {
-// 		if s.Type == define.BaseAppSrv {
+// 		if s.Type == metapart.BaseAppSrv {
 // 			return s, nil
 // 		}
 // 	}
 // 	logger.Errorf("找不到负载最小的 base server")
-// 	return nil, define.ErrInvalidArgs
+// 	return nil, metapart.ErrInvalidArgs
 // }

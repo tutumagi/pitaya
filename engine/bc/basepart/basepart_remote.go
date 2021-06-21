@@ -111,8 +111,8 @@ func (r *EntityHandler) CreateBaseSpaceIfNeed(
 	logger.Infof("CreateBaseSpaceIfNeed, req=%+v", req)
 
 	//判断 MasterSpace是否已经存在
-	// assert(req.SpaceID == define.MasterSpaceID)
-	sp := GetSpace(req.SpaceID) //GetSpace(define.MasterSpaceID)
+	// assert(req.SpaceID == metapart.MasterSpaceID)
+	sp := GetSpace(req.SpaceID) //GetSpace(metapart.MasterSpaceID)
 	if sp == nil {
 		err := r.createBaseSpaceFromRemote(entity, req)
 		if err != nil {

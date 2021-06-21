@@ -226,6 +226,7 @@ func AddTypDesc(
 		cellTyp:   cellTyp,
 
 		// meta: &attr.Meta{},
+		Routers: NewRouters(),
 	}
 
 	registerEntityTypes[typName] = typeDesc
