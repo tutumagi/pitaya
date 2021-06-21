@@ -4,21 +4,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/examples/demo/cluster_protobuf/baseapp/entity"
 	"github.com/tutumagi/pitaya/examples/demo/cluster_protobuf/protos"
+	"github.com/tutumagi/pitaya/logger"
 )
 
 type AccountHandler struct {
 }
 
 // Join room
-func (r *AccountHandler) Join(ctx context.Context, ent interface{}, msg []byte) (*protos.ResponseV2, error) {
-	player := ent.(*entity.Account)
+func (r *AccountHandler) Join(ctx context.Context, msg []byte) (*protos.ResponseV2, error) {
+	player := ctx.Value(constants.EntityCtxKey).(*entity.Account)
 
-	player.ID = metapart.NewUUID()
-
+	logger.Infof("account join :%s", player.ID)
 	// rsp := &JoinResponse{}
 	// err := player.CallService(ctx, "room", "room.join", rsp, msg)
 	// if err != nil {

@@ -288,6 +288,8 @@ func Start() {
 
 	initSysRemotes()
 
+	timer.GlobalTicker = time.NewTicker(timer.Precision)
+
 	initialize(
 		app.dieChan,
 		app.serializer,
@@ -334,7 +336,6 @@ func listen() {
 	// startupComponents()
 	// create global ticker instance, timer precision could be customized
 	// by SetTimerPrecision
-	timer.GlobalTicker = time.NewTicker(timer.Precision)
 
 	logger.Log.Infof("starting server %s:%s", app.server.Type, app.server.ID)
 	// for i := 0; i < app.config.GetInt("pitaya.concurrency.handler.dispatch"); i++ {

@@ -62,7 +62,8 @@
         console.log("initialized");
         starx.on("onNewUser", onNewUser);
         starx.on("onMembers", onMembers);
-        starx.request("room.join", {}, join);
+        // starx.request("baseapp.room.join", {}, join);
+        starx.request("baseapp.account.join", {}, join);
     })
 </script>
 </body>

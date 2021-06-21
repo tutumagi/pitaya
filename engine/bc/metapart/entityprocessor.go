@@ -101,7 +101,8 @@ func (r *EntityMsgProcessor) handleRPCUser(ctx context.Context, req *protos.Requ
 		}
 		return response
 	}
-	params := []reflect.Value{remote.Receiver, reflect.ValueOf(ctx), reflect.ValueOf(entity)}
+	ctx = context.WithValue(ctx, constants.EntityCtxKey, entity)
+	params := []reflect.Value{remote.Receiver, reflect.ValueOf(ctx)}
 	if remote.HasArgs {
 		arg, err := unmarshalRemoteArg(remote, req.GetMsg().GetData())
 		if err != nil {

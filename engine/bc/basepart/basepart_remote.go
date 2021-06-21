@@ -6,6 +6,7 @@ import (
 
 	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/cluster"
+	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/math32"
 	"github.com/tutumagi/pitaya/logger"
@@ -89,10 +90,9 @@ func (r *EntityHandler) EnterSpaceResult(ctx context.Context, req *protos.EnterS
 // CreateBaseSpaces  在 baseapp 上创建空间
 func (r *EntityHandler) CreateBaseSpace(
 	ctx context.Context,
-	entity interface{},
 	req *protos.CreateBaseSpaceReq,
 ) (*protos.Response, error) {
-	err := r.createBaseSpaceFromRemote(entity, req)
+	err := r.createBaseSpaceFromRemote(ctx.Value(constants.EntityCtxKey), req)
 	if err != nil {
 		return nil, err
 	}
@@ -104,17 +104,16 @@ func (r *EntityHandler) CreateBaseSpace(
 // 主要用于解决base、cell 和 cellmgr 之间的启动依赖。
 func (r *EntityHandler) CreateBaseSpaceIfNeed(
 	ctx context.Context,
-	entity interface{},
 	req *protos.CreateBaseSpaceReq,
 ) (*protos.Response, error) {
-	caller := entity.(*Remote)
+	caller := ctx.Value(constants.EntityCtxKey).(*Remote)
 	logger.Infof("CreateBaseSpaceIfNeed, req=%+v", req)
 
 	//判断 MasterSpace是否已经存在
 	// assert(req.SpaceID == metapart.MasterSpaceID)
 	sp := GetSpace(req.SpaceID) //GetSpace(metapart.MasterSpaceID)
 	if sp == nil {
-		err := r.createBaseSpaceFromRemote(entity, req)
+		err := r.createBaseSpaceFromRemote(caller, req)
 		if err != nil {
 			logger.Errorf("createBaseSpaceFromRemote failed. id:%s kind:%d cellServerID:%s err:%s", req.SpaceID, req.SpaceKind, req.CellServerID, err)
 			return nil, err
@@ -218,11 +217,10 @@ func (r *EntityHandler) DestroyEntity(ctx context.Context, req *protos.Entity) (
 }
 
 func (r *EntityHandler) CreateEntity(ctx context.Context, req *protos.SEntityData) (*protos.Response, error) {
-	ent := GetEntity(req.EntityLabel, req.EntityID)
-
 	// 如果该Server 没有该实体， 则拿到迁移数据进行 重建实体，这里重建实体不包括timer，只包括数据
 	typDesc := metapart.GetTypeDesc(req.EntityLabel)
 	if typDesc == nil {
+		logger.Debugf("没有该实体类型 %s req:%s", req.EntityLabel, req.String())
 		return nil, fmt.Errorf("没有该实体类型 %s", req.EntityLabel)
 	}
 	var attrs *attr.StrMap
@@ -234,7 +232,7 @@ func (r *EntityHandler) CreateEntity(ctx context.Context, req *protos.SEntityDat
 		}
 	}
 
-	ent = baseEntManager.CreateEntity(
+	ent := baseEntManager.CreateEntity(
 		req.EntityLabel,
 		req.EntityID,
 		attrs,
@@ -256,8 +254,8 @@ func (r *EntityHandler) CreateEntity(ctx context.Context, req *protos.SEntityDat
 	return &protos.Response{}, nil
 }
 
-func (r *EntityHandler) ClientConnected(ctx context.Context, entity interface{}, req *protos.ClientConnect) (*protos.Response, error) {
-	entityService := entity.(*Remote)
+func (r *EntityHandler) ClientConnected(ctx context.Context, req *protos.ClientConnect) (*protos.Response, error) {
+	entityService := ctx.Value(constants.EntityCtxKey).(*Remote)
 	client, _ := agent.NewRemote(
 		req.Sess.Id,
 		req.Sess.ServerID,
@@ -269,7 +267,7 @@ func (r *EntityHandler) ClientConnected(ctx context.Context, entity interface{},
 	)
 	// TODO 用配置表
 	// bootEntityType := app.config.GetString("pitaya.bootentity")
-	bootEntityType := "acount"
+	bootEntityType := "account"
 	e := CreateEntity(bootEntityType, req.BootEntityID, nil, false)
 	e.SetClient(client)
 

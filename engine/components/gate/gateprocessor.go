@@ -211,11 +211,13 @@ func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
 		// bootEntityType := app.config.GetString("pitaya.bootentity")
 		a.OwnerEntityID = metapart.NewUUID()
 
+		logger.Warnf("创建bootEntity id:%s", a.OwnerEntityID)
+
 		// TODO 这里写死请求到某个服务类型
 		err := h.caller.CallService(
 			context.TODO(),
 			"entity",
-			"baseapp.entity.createentity",
+			"baseapp.entity.clientconnected",
 			&protos.Response{},
 			&protos.ClientConnect{
 				Sess: &protos.Session{
@@ -247,7 +249,8 @@ func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
 		if err != nil {
 			return err
 		}
-
+		msg.EntityID = a.OwnerEntityID
+		msg.EntityType = "account"
 		// logger.Log.Debugf("pitaya.handler begin to processMessage for SessionID=%d, UID=%s, route=%s", a.Session.ID(), a.Session.UID(), msg.Route)
 		h.processMessage(a, msg)
 		// logger.Log.Debugf("pitaya.handler end to processMessage for SessionID=%d, UID=%s, route=%s", a.Session.ID(), a.Session.UID(), msg.Route)
@@ -310,7 +313,8 @@ func (p GateProcessor) Dispatch(thread int) {
 	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
 	// defer timer.GlobalTicker.Stop()
 	defer func() {
-		logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit", thread)
+		// logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit", thread)
+		logger.Errorf("Go HandlerService::Dispatch(%d) exit", thread)
 		timer.GlobalTicker.Stop()
 		if err := recover(); err != nil {
 			logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit by err = %v", thread, err)

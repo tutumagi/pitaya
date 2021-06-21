@@ -154,7 +154,7 @@ func processHandlerMessage(
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// ctx = context.WithValue(ctx, constants.SessionCtxKey, session)
+	ctx = context.WithValue(ctx, constants.EntityCtxKey, entity)
 	// ctx = util.CtxWithDefaultLogger(ctx, rt.String(), session.UID())
 
 	// tufei
@@ -196,7 +196,7 @@ func processHandlerMessage(
 
 	// 注释 by 涂飞 日志太多了
 	// logger.Debugf("SID=%d, Data=%s", session.ID(), data)
-	args := []reflect.Value{h.Receiver, reflect.ValueOf(ctx), reflect.ValueOf(entity)}
+	args := []reflect.Value{h.Receiver, reflect.ValueOf(ctx)}
 	if arg != nil {
 		args = append(args, reflect.ValueOf(arg))
 	}

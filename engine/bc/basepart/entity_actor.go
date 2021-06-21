@@ -37,7 +37,7 @@ func (e *Entity) Receive(ctx actor.Context) {
 		e.I.OnClientConnected()
 	case *common.LocalMessageWrapper:
 		// 开始处理业务逻辑消息
-		ret := msgProcessor.ProcessMessage(msg.Ctx, msg.Req, e, e.typeDesc.Routers)
+		ret := msgProcessor.ProcessMessage(msg.Ctx, msg.Req, e.Val(), e.typeDesc.Routers)
 		if ret != nil {
 			ctx.Respond(ret)
 		}

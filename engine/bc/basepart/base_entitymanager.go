@@ -240,7 +240,7 @@ func createBaseEntityOnlyInit(
 ) *Entity {
 	typeDesc := metapart.GetTypeDesc(label)
 	if typeDesc == nil {
-		logger.Panic("unknown entity type", zap.String("name", label))
+		logger.Panicf("unknown entity type %s", label)
 	}
 
 	entityInstance := reflect.New(typeDesc.BaseTyp())

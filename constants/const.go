@@ -46,6 +46,9 @@ const (
 // SessionCtxKey is the context key where the session will be set
 var SessionCtxKey = "session"
 
+// 当前context绑定的实体
+var EntityCtxKey = "entity"
+
 // LoggerCtxKey is the context key where the default logger will be set
 var LoggerCtxKey = "default-logger"
 
