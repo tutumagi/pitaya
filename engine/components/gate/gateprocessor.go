@@ -444,10 +444,10 @@ func (p GateProcessor) Call(
 		return err
 	}
 	if reply != nil {
-		logger.Log.Debugf("pitaya/remote call message to entity: entity(id:%s type:%s)", entityID, entityType)
+		logger.Log.Debugf("pitaya/remote call message to entity: entity(id:%s type:%s) route:%s serverID:%s", entityID, entityType, routeStr, serverID)
 		return p.remote.RPC(ctx, entityID, entityType, "", droute, reply, arg)
 	} else {
-		logger.Log.Debugf("pitaya/remote send message to entity: entity(id:%s type:%s)", entityID, entityType)
+		logger.Log.Debugf("pitaya/remote send message to entity: entity(id:%s type:%s) route:%s serverID:%s", entityID, entityType, routeStr, serverID)
 		return p.remote.Send(ctx, entityID, entityType, "", droute, arg)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/serialize/json"
 
+	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/components/gate"
 )
 
@@ -20,29 +21,21 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.Llongfile)
 
-	// startWeb()
-
 	t := acceptor.NewWSAcceptor(":3250")
 	gate.AddAcceptor(t)
 
-	gate.Configure("gate", map[string]string{}, conf)
+	gate.Configure(metapart.GateAppSvr, map[string]string{}, conf)
 	gate.Start()
 }
 
 func configApp() *viper.Viper {
 	conf := viper.New()
-	conf.SetEnvPrefix("chat") // allows using env vars in the CHAT_PITAYA_ format
+	// conf.SetEnvPrefix("chat") // allows using env vars in the CHAT_PITAYA_ format
 	conf.SetDefault("pitaya.buffer.handler.localprocess", 15)
 	conf.Set("pitaya.heartbeat.interval", "15s")
 	conf.Set("pitaya.buffer.agent.messages", 32)
 	conf.Set("pitaya.handler.messages.compression", false)
 
-	conf.Set("pitaya.bootentity", "player")
+	conf.Set("pitaya.bootentity", "account")
 	return conf
 }
-
-// func startWeb() {
-// 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
-
-// 	go http.ListenAndServe(":3251", nil)
-// }
