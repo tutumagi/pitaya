@@ -228,7 +228,8 @@ func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
 			},
 		)
 		if err != nil {
-			logger.Errorf("创建bootEntity失败 %s", err)
+			logger.Warnf("创建bootEntity失败 %s", err)
+			// TODO 这里需要关闭此连接
 		} else {
 			logger.Debugf("创建bootEntity成功")
 		}
@@ -438,14 +439,15 @@ func (p GateProcessor) Call(
 	reply proto.Message,
 	arg proto.Message,
 ) error {
-	logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
 	droute, err := route.Decode(routeStr)
 	if err != nil {
 		return err
 	}
 	if reply != nil {
+		logger.Log.Debugf("pitaya/remote call message to entity: entity(id:%s type:%s)", entityID, entityType)
 		return p.remote.RPC(ctx, entityID, entityType, "", droute, reply, arg)
 	} else {
+		logger.Log.Debugf("pitaya/remote send message to entity: entity(id:%s type:%s)", entityID, entityType)
 		return p.remote.Send(ctx, entityID, entityType, "", droute, arg)
 	}
 }

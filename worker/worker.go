@@ -30,7 +30,7 @@ import (
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 
-	workers "github.com/topfreegames/go-workers"
+	workers "github.com/tutumagi/go-workers"
 )
 
 // Worker executes RPCs with retry and backoff time

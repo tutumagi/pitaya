@@ -22,9 +22,10 @@ require (
 	github.com/jhump/protoreflect v1.5.0
 	github.com/klauspost/compress v1.11.12 // indirect
 	github.com/nats-io/jwt v1.2.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.1.9
+	github.com/nats-io/nats-server/v2 v2.2.6
+	github.com/nats-io/nats-streaming-server v0.22.0 // indirect
 	github.com/nats-io/nats.go v1.11.0
-	github.com/nats-io/stan.go v0.8.2
+	github.com/nats-io/stan.go v0.9.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.7.0
 	github.com/prometheus/procfs v0.6.0 // indirect
@@ -32,7 +33,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
-	github.com/topfreegames/go-workers v1.0.0
+	github.com/tutumagi/go-workers v1.1.0
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	gitlab.gamesword.com/nut/dreamcity v0.0.2

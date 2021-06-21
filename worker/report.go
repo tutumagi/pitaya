@@ -7,7 +7,7 @@ import (
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 
-	workers "github.com/topfreegames/go-workers"
+	"github.com/tutumagi/go-workers"
 )
 
 // Report sends periodic of worker reports
