@@ -5,7 +5,6 @@ import (
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
-	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/serialize"
@@ -23,7 +22,7 @@ func Init(
 	appDieChan chan bool,
 	serializer1 serialize.Serializer,
 	rootSystem *actor.ActorSystem,
-	remoteCaller common.EntityRemoteCaller,
+	// remoteCaller common.EntityRemoteCaller,
 	rpcClient1 cluster.RPCClient,
 ) {
 	cellEntManager = newCellEntityManager(rootSystem)

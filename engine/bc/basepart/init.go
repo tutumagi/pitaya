@@ -2,8 +2,11 @@ package basepart
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/tutumagi/pitaya/cluster"
+	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
-	"github.com/tutumagi/pitaya/engine/common"
+	"github.com/tutumagi/pitaya/metrics"
+	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 )
 
@@ -12,20 +15,38 @@ var msgProcessor *metapart.EntityMsgProcessor
 var caller *Caller
 
 func Init(
-	appDieChan chan bool,
+	dieChan chan bool,
 	serializer serialize.Serializer,
-	rootSystem *actor.ActorSystem,
-	remoteCaller common.EntityRemoteCaller,
+	server *cluster.Server,
+	messageEncoder message.Encoder,
+	metricsReporters []metrics.Reporter,
+
+	rpcClient cluster.RPCClient,
+	rpcServer cluster.RPCServer,
+	sd cluster.ServiceDiscovery,
+	router *router.Router,
+
+	actorSystem *actor.ActorSystem,
 ) {
-	baseEntManager = newBaseEntityManager(rootSystem)
+	baseEntManager = newBaseEntityManager(actorSystem)
 
 	msgProcessor = metapart.NewEntityProcessor(
 		serializer,
 	)
 	caller = NewAppProcessor(
-		appDieChan,
+		dieChan,
 		serializer,
-		rootSystem,
-		remoteCaller,
+		server,
+		messageEncoder,
+		metricsReporters,
+
+		rpcClient,
+		rpcServer,
+		sd,
+		router,
+
+		actorSystem,
 	)
+
+	caller.Start()
 }

@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"reflect"
 	"testing"
@@ -41,14 +40,12 @@ import (
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
 	e "github.com/tutumagi/pitaya/errors"
-	"github.com/tutumagi/pitaya/helpers"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize/json"
 	"github.com/tutumagi/pitaya/session"
-	"github.com/tutumagi/pitaya/timer"
 	// "go.etcd.io/etcd/integration"
 )
 
@@ -366,73 +363,8 @@ func TestStartDefaultRPCClient(t *testing.T) {
 	assert.Equal(t, typeOfNatsRPCClient, reflect.TypeOf(app.rpcClient))
 }
 
-func TestStartAndListenStandalone(t *testing.T) {
-	initApp()
-	Configure(true, "testtype", Standalone, map[string]string{}, viper.New())
-
-	acc := acceptor.NewTCPAcceptor("127.0.0.1:0")
-	AddAcceptor(acc)
-
-	go func() {
-		Start()
-	}()
-	helpers.ShouldEventuallyReturn(t, func() bool {
-		return app.running
-	}, true)
-
-	assert.NotNil(t, handlerService)
-	assert.NotNil(t, timer.GlobalTicker)
-	// should be listening
-	assert.NotEmpty(t, acc.GetAddr())
-	helpers.ShouldEventuallyReturn(t, func() error {
-		n, err := net.Dial("tcp", acc.GetAddr())
-		defer n.Close()
-		return err
-	}, nil, 10*time.Millisecond, 100*time.Millisecond)
-}
-
 func ConfigureClusterApp() {
 
-}
-
-func TestStartAndListenCluster(t *testing.T) {
-	es, cli := helpers.GetTestEtcd(t)
-	defer es.Terminate(t)
-
-	ns := helpers.GetTestNatsServer(t)
-	nsAddr := ns.Addr().String()
-
-	cfg := viper.New()
-	cfg.Set("pitaya.cluster.rpc.client.nats.connect", fmt.Sprintf("nats://%s", nsAddr))
-	cfg.Set("pitaya.cluster.rpc.server.nats.connect", fmt.Sprintf("nats://%s", nsAddr))
-
-	initApp()
-	Configure(true, "testtype", Cluster, map[string]string{}, cfg)
-
-	etcdSD, err := cluster.NewEtcdServiceDiscovery(app.config, app.server, app.dieChan, cli)
-	assert.NoError(t, err)
-	SetServiceDiscoveryClient(etcdSD)
-
-	acc := acceptor.NewTCPAcceptor("127.0.0.1:0")
-	assert.Nil(t, err)
-	AddAcceptor(acc)
-
-	go func() {
-		Start()
-	}()
-	helpers.ShouldEventuallyReturn(t, func() bool {
-		return app.running
-	}, true)
-
-	assert.NotNil(t, handlerService)
-	assert.NotNil(t, timer.GlobalTicker)
-	// should be listening
-	assert.NotEmpty(t, acc.GetAddr())
-	helpers.ShouldEventuallyReturn(t, func() error {
-		n, err := net.Dial("tcp", acc.GetAddr())
-		defer n.Close()
-		return err
-	}, nil, 10*time.Millisecond, 100*time.Millisecond)
 }
 
 func TestError(t *testing.T) {

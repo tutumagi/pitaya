@@ -7,12 +7,15 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/golang/protobuf/proto"
+	"github.com/tutumagi/pitaya/cluster"
+	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/engine/common"
 	e "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/route"
+	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/timer"
 )
@@ -27,7 +30,7 @@ type Caller struct {
 
 	metricsReporters []metrics.Reporter
 
-	remote common.EntityRemoteCaller
+	remote *common.RemoteService
 
 	actorSystem *actor.ActorSystem
 }
@@ -35,15 +38,38 @@ type Caller struct {
 func NewAppProcessor(
 	dieChan chan bool,
 	serializer serialize.Serializer,
+	server *cluster.Server,
+	messageEncoder message.Encoder,
+	metricsReporters []metrics.Reporter,
+
+	rpcClient cluster.RPCClient,
+	rpcServer cluster.RPCServer,
+	sd cluster.ServiceDiscovery,
+	router *router.Router,
+
 	system *actor.ActorSystem,
-	remote common.EntityRemoteCaller,
 ) *Caller {
 	p := &Caller{
 		appDieChan:  dieChan,
 		serializer:  serializer,
-		remote:      remote,
 		actorSystem: system,
 	}
+
+	// p.remote = common.NewRemoteService()
+	p.remote = common.NewRemoteService(
+		dieChan,
+		serializer,
+		server,
+		metricsReporters,
+		rpcClient,
+		rpcServer,
+		sd,
+		router,
+		system,
+		p,
+	)
+
+	rpcServer.SetPitayaServer(p.remote)
 
 	return p
 }
@@ -211,14 +237,3 @@ func (p *Caller) Call(
 	return nil
 
 }
-
-// func (p *Caller) callFromLocal(
-// 	ctx context.Context,
-// 	entityID,
-// 	entityType string,
-// 	routeStr string,
-// 	reply proto.Message,
-// 	arg proto.Message,
-// ) error {
-
-// }

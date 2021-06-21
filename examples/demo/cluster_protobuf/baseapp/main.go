@@ -13,8 +13,8 @@ func configureBackend() {
 }
 
 func main() {
-	svType := flag.String("type", "connector", "the server type")
-	isFrontend := flag.Bool("frontend", true, "if server is frontend")
+	svType := "baseapp"
+	isFrontend := false
 
 	flag.Parse()
 
@@ -26,6 +26,6 @@ func main() {
 
 	configureBackend()
 
-	app.Configure(*isFrontend, *svType, app.Cluster, map[string]string{})
+	app.Configure(isFrontend, svType, app.Cluster, map[string]string{})
 	app.Start()
 }

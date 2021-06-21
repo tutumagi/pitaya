@@ -4,9 +4,7 @@ import (
 	"context"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/golang/protobuf/proto"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 )
 
 const HandlerType = "handler"
@@ -26,9 +24,9 @@ type LocalMessageWrapper struct {
 	Req *protos.Request
 }
 
-type EntityRemoteCaller interface {
-	// 同步 rpc
-	RPC(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, reply proto.Message, arg proto.Message) error
-	// 异步 rpc
-	Send(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, arg proto.Message) error
-}
+// type EntityRemoteCaller interface {
+// 	// 同步 rpc
+// 	RPC(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, reply proto.Message, arg proto.Message) error
+// 	// 异步 rpc
+// 	Send(ctx context.Context, entityID, entityType string, serverID string, route *route.Route, arg proto.Message) error
+// }

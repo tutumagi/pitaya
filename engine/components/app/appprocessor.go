@@ -1,199 +1,180 @@
 package app
 
-import (
-	"context"
-	"fmt"
-	"time"
+// type EntityManager interface {
+// 	// 通过实体 ID 获取 typeName
+// 	GetTypName(id string) (string, error)
+// 	// 获取实际的实体对象，可能是 cellpart.Entity.Val() ，也可能是 basepart.Entity.Val()，所以用 interface{}
+// 	GetEntityVal(id string, typName string) interface{}
+// 	// 获取实体绑定的pid
+// 	GetEntityPid(id string, typName string) *actor.PID
+// }
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/tutumagi/pitaya/cluster"
-	"github.com/tutumagi/pitaya/conn/codec"
-	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/engine/common"
-	e "github.com/tutumagi/pitaya/errors"
-	"github.com/tutumagi/pitaya/logger"
-	"github.com/tutumagi/pitaya/metrics"
-	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/router"
-	"github.com/tutumagi/pitaya/serialize"
-	"github.com/tutumagi/pitaya/timer"
-)
+// type AppMsgProcessor struct {
+// 	appDieChan chan bool // die channel app
 
-type EntityManager interface {
-	// 通过实体 ID 获取 typeName
-	GetTypName(id string) (string, error)
-	// 获取实际的实体对象，可能是 cellpart.Entity.Val() ，也可能是 basepart.Entity.Val()，所以用 interface{}
-	GetEntityVal(id string, typName string) interface{}
-	// 获取实体绑定的pid
-	GetEntityPid(id string, typName string) *actor.PID
-}
+// 	messageEncoder message.Encoder
+// 	serializer     serialize.Serializer // message serializer
+// 	encoder        codec.PacketEncoder
+// 	decoder        codec.PacketDecoder
 
-type AppMsgProcessor struct {
-	appDieChan chan bool // die channel app
+// 	// 当前server信息
+// 	server *cluster.Server
 
-	messageEncoder message.Encoder
-	serializer     serialize.Serializer // message serializer
-	encoder        codec.PacketEncoder
-	decoder        codec.PacketDecoder
+// 	metricsReporters []metrics.Reporter
 
-	// 当前server信息
-	server *cluster.Server
+// 	heartbeatTimeout   time.Duration
+// 	messagesBufferSize int
 
-	metricsReporters []metrics.Reporter
+// 	remote *common.RemoteService
 
-	heartbeatTimeout   time.Duration
-	messagesBufferSize int
+// 	entityManager EntityManager
+// 	actorSystem   *actor.ActorSystem
+// }
 
-	remote *common.RemoteService
+// func NewAppProcessor(
+// 	dieChan chan bool,
+// 	serializer serialize.Serializer,
+// 	server *cluster.Server,
+// 	messageEncoder message.Encoder,
+// 	metricsReporters []metrics.Reporter,
 
-	entityManager EntityManager
-	actorSystem   *actor.ActorSystem
-}
+// 	rpcClient cluster.RPCClient,
+// 	rpcServer cluster.RPCServer,
+// 	sd cluster.ServiceDiscovery,
+// 	router *router.Router,
 
-func NewAppProcessor(
-	dieChan chan bool,
-	serializer serialize.Serializer,
-	server *cluster.Server,
-	messageEncoder message.Encoder,
-	metricsReporters []metrics.Reporter,
+// 	system *actor.ActorSystem,
+// ) *AppMsgProcessor {
+// 	p := &AppMsgProcessor{
+// 		serializer:       serializer,
+// 		appDieChan:       dieChan,
+// 		server:           server,
+// 		metricsReporters: metricsReporters,
+// 		messageEncoder:   messageEncoder,
 
-	rpcClient cluster.RPCClient,
-	rpcServer cluster.RPCServer,
-	sd cluster.ServiceDiscovery,
-	router *router.Router,
+// 		actorSystem: system,
+// 	}
+// 	remote := common.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system, p)
+// 	p.remote = remote
 
-	system *actor.ActorSystem,
-) *AppMsgProcessor {
-	p := &AppMsgProcessor{
-		serializer:       serializer,
-		appDieChan:       dieChan,
-		server:           server,
-		metricsReporters: metricsReporters,
-		messageEncoder:   messageEncoder,
+// 	return p
+// }
 
-		actorSystem: system,
-	}
-	remote := common.NewRemoteService(dieChan, serializer, server, metricsReporters, rpcClient, rpcServer, sd, router, system, p)
-	p.remote = remote
+// func (p *AppMsgProcessor) Start() {
+// 	// for i := 0; i < 10; i++ {
+// 	// 	go p.Dispatch()
+// 	// }
 
-	return p
-}
+// 	// app.config.GetInt("pitaya.concurrency.handler.dispatch")
+// 	const numberDispatch = 10
+// 	for i := 0; i < numberDispatch; i++ {
+// 		go p.Dispatch(i)
+// 	}
+// }
 
-func (p *AppMsgProcessor) Start() {
-	// for i := 0; i < 10; i++ {
-	// 	go p.Dispatch()
-	// }
+// func (p *AppMsgProcessor) Dispatch(thread int) {
+// 	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
+// 	// defer timer.GlobalTicker.Stop()
+// 	defer func() {
+// 		logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit", thread)
+// 		timer.GlobalTicker.Stop()
+// 		if err := recover(); err != nil {
+// 			logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit by err = %v", thread, err)
+// 		}
+// 	}()
 
-	// app.config.GetInt("pitaya.concurrency.handler.dispatch")
-	const numberDispatch = 10
-	for i := 0; i < numberDispatch; i++ {
-		go p.Dispatch(i)
-	}
-}
+// 	for {
+// 		// Calls to remote servers block calls to local server
+// 		select {
+// 		// 收到 rpc call/post 后，处理消息
+// 		// case rpcReq := <-p.remoteService.rpcServer.GetUnhandledRequestsChannel():
+// 		// 	// logger.Log.Infof("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for ", zap.Any("rpcReq", rpcReq))
+// 		// 	// logger.Log.Debugf("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for route=%s", rpcReq.Msg.Route)
+// 		// 	p.remoteService.rpcServer.ProcessSingleMessage(rpcReq)
+// 		// logger.Log.Infof("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <1> for ", zap.Any("rpcReq", rpcReq))
+// 		// logger.Log.Debugf("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <1> for route=%s", rpcReq.Msg.Route)
+// 		case <-timer.GlobalTicker.C: // execute cron task
+// 			timer.Cron()
 
-func (p *AppMsgProcessor) Dispatch(thread int) {
-	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
-	// defer timer.GlobalTicker.Stop()
-	defer func() {
-		logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit", thread)
-		timer.GlobalTicker.Stop()
-		if err := recover(); err != nil {
-			logger.Log.Warnf("Go HandlerService::Dispatch(%d) exit by err = %v", thread, err)
-		}
-	}()
+// 		case t := <-timer.Manager.ChCreatedTimer: // new Timers
+// 			timer.AddTimer(t)
 
-	for {
-		// Calls to remote servers block calls to local server
-		select {
-		// 收到 rpc call/post 后，处理消息
-		// case rpcReq := <-p.remoteService.rpcServer.GetUnhandledRequestsChannel():
-		// 	// logger.Log.Infof("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for ", zap.Any("rpcReq", rpcReq))
-		// 	// logger.Log.Debugf("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <0> for route=%s", rpcReq.Msg.Route)
-		// 	p.remoteService.rpcServer.ProcessSingleMessage(rpcReq)
-		// logger.Log.Infof("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <1> for ", zap.Any("rpcReq", rpcReq))
-		// logger.Log.Debugf("pitaya.handler Dispatch -> rpc.ProcessSingleMessage <1> for route=%s", rpcReq.Msg.Route)
-		case <-timer.GlobalTicker.C: // execute cron task
-			timer.Cron()
-
-		case t := <-timer.Manager.ChCreatedTimer: // new Timers
-			timer.AddTimer(t)
-
-		case id := <-timer.Manager.ChClosingTimer: // closing Timers
-			timer.RemoveTimer(id)
-		}
-	}
-}
-
-func (r *AppMsgProcessor) Process(ctx context.Context, req *protos.Request) *protos.Response {
-	entityID := req.Msg.Eid
-	entityType := req.Msg.Typ
-	entity := r.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-			},
-		}
-	}
-
-	rsp, err := r.actorSystem.Root.RequestFuture(
-		r.entityManager.GetEntityPid(entityID, entityType),
-		&common.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: req,
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return &protos.Response{
-			Error: &protos.Error{
-				Code: e.ErrUnknownCode,
-				Msg:  fmt.Sprintf("actor.proto requestFuture error:%s", err),
-			},
-		}
-	} else {
-		if rspp, ok := rsp.(*protos.Response); ok {
-			return rspp
-		} else {
-			return &protos.Response{
-				Error: &protos.Error{
-					Code: e.ErrUnknownCode,
-					Msg:  "rsp type is not *protos.Response",
-				},
-			}
-		}
-	}
-}
-
-// ret, err := processHandlerMessage(
-// 	ctx,
-// 	route,
-// 	p.serializer,
-// 	a.Session,
-// 	msg.EntityID,
-// 	msg.EntityType,
-// 	p,
-// 	msg.Data,
-// 	msg.Type,
-// 	false,
-// )
-// if msg.Type != message.Notify {
-// 	if err != nil {
-// 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
-// 		a.AnswerWithError(ctx, mid, err)
-// 	} else {
-// 		err := a.Session.ResponseMID(ctx, mid, ret)
-// 		if err != nil {
-// 			tracing.FinishSpan(ctx, err)
-// 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
+// 		case id := <-timer.Manager.ChClosingTimer: // closing Timers
+// 			timer.RemoveTimer(id)
 // 		}
 // 	}
-// } else {
-// 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
-// 	tracing.FinishSpan(ctx, err)
 // }
+
+// func (r *AppMsgProcessor) Process(ctx context.Context, req *protos.Request) *protos.Response {
+// 	entityID := req.Msg.Eid
+// 	entityType := req.Msg.Typ
+// 	entity := r.entityManager.GetEntityVal(entityID, entityType)
+// 	if entity == nil {
+// 		logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
+
+// 		return &protos.Response{
+// 			Error: &protos.Error{
+// 				Code: e.ErrUnknownCode,
+// 				Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
+// 			},
+// 		}
+// 	}
+
+// 	rsp, err := r.actorSystem.Root.RequestFuture(
+// 		r.entityManager.GetEntityPid(entityID, entityType),
+// 		&common.LocalMessageWrapper{
+// 			Ctx: ctx,
+// 			Req: req,
+// 		},
+// 		//TODO 这里写的2秒
+// 		2*time.Second,
+// 	).Result()
+
+// 	if err != nil {
+// 		return &protos.Response{
+// 			Error: &protos.Error{
+// 				Code: e.ErrUnknownCode,
+// 				Msg:  fmt.Sprintf("actor.proto requestFuture error:%s", err),
+// 			},
+// 		}
+// 	} else {
+// 		if rspp, ok := rsp.(*protos.Response); ok {
+// 			return rspp
+// 		} else {
+// 			return &protos.Response{
+// 				Error: &protos.Error{
+// 					Code: e.ErrUnknownCode,
+// 					Msg:  "rsp type is not *protos.Response",
+// 				},
+// 			}
+// 		}
+// 	}
+// }
+
+// // ret, err := processHandlerMessage(
+// // 	ctx,
+// // 	route,
+// // 	p.serializer,
+// // 	a.Session,
+// // 	msg.EntityID,
+// // 	msg.EntityType,
+// // 	p,
+// // 	msg.Data,
+// // 	msg.Type,
+// // 	false,
+// // )
+// // if msg.Type != message.Notify {
+// // 	if err != nil {
+// // 		logger.Log.Errorf("Failed to process handler(route:%s) message: %s", route.Short(), err.Error())
+// // 		a.AnswerWithError(ctx, mid, err)
+// // 	} else {
+// // 		err := a.Session.ResponseMID(ctx, mid, ret)
+// // 		if err != nil {
+// // 			tracing.FinishSpan(ctx, err)
+// // 			metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, err)
+// // 		}
+// // 	}
+// // } else {
+// // 	metrics.ReportTimingFromCtx(ctx, p.metricsReporters, handlerType, nil)
+// // 	tracing.FinishSpan(ctx, err)
+// // }

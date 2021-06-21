@@ -23,6 +23,7 @@ package app
 import (
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"time"
@@ -32,10 +33,12 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/cluster"
+	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
-	"github.com/tutumagi/pitaya/engine/bc/baseapp"
+	"github.com/tutumagi/pitaya/engine/bc"
+	"github.com/tutumagi/pitaya/engine/bc/basepart"
 	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
@@ -110,7 +113,7 @@ var (
 	}
 
 	// remoteService  *callpart.RemoteService
-	handlerService *AppMsgProcessor
+	// handlerService *AppMsgProcessor
 )
 
 // Configure configures the app
@@ -283,7 +286,9 @@ func Start() {
 
 	actorSystem := actor.NewActorSystem()
 
-	handlerService = NewAppProcessor(
+	initSysRemotes()
+
+	initialize(
 		app.dieChan,
 		app.serializer,
 		app.server,
@@ -294,19 +299,6 @@ func Start() {
 		app.serviceDiscovery,
 		app.router,
 		actorSystem,
-	)
-
-	app.rpcServer.SetPitayaServer(handlerService.remote)
-
-	initSysRemotes()
-
-	baseapp.Initialize(
-		app.dieChan,
-		app.rpcClient,
-		app.serializer,
-		app.serviceDiscovery,
-		actorSystem,
-		handlerService.remote,
 	)
 
 	periodicMetrics()
@@ -345,13 +337,59 @@ func listen() {
 	timer.GlobalTicker = time.NewTicker(timer.Precision)
 
 	logger.Log.Infof("starting server %s:%s", app.server.Type, app.server.ID)
-	for i := 0; i < app.config.GetInt("pitaya.concurrency.handler.dispatch"); i++ {
-		go handlerService.Dispatch(i)
-	}
+	// for i := 0; i < app.config.GetInt("pitaya.concurrency.handler.dispatch"); i++ {
+	// 	go handlerService.Dispatch(i)
+	// }
 
 	common.StartModules()
 
 	logger.Log.Info("all modules started!")
 
 	app.running = true
+}
+
+func initialize(
+	dieChan chan bool,
+	serializer serialize.Serializer,
+	server *cluster.Server,
+	messageEncoder message.Encoder,
+	metricsReporters []metrics.Reporter,
+
+	rpcClient cluster.RPCClient,
+	rpcServer cluster.RPCServer,
+	sd cluster.ServiceDiscovery,
+	router *router.Router,
+
+	actorSystem *actor.ActorSystem,
+) {
+	basepart.Init(app.dieChan,
+		app.serializer,
+		app.server,
+		app.messageEncoder,
+		app.metricsReporters,
+		app.rpcClient,
+		app.rpcServer,
+		app.serviceDiscovery,
+		app.router,
+		actorSystem,
+	)
+
+	initEntityService(rpcClient, serializer, sd)
+}
+
+func initEntityService(rpcClient cluster.RPCClient,
+	serializer serialize.Serializer,
+	serviceDiscovery cluster.ServiceDiscovery,
+) {
+	entityServices := basepart.NewRemote(
+		rpcClient,
+		serializer,
+		serviceDiscovery,
+	)
+
+	typeDesc := bc.RegisterService("entity", entityServices)
+
+	typeDesc.Routers.RegisterRemote(&basepart.EntityHandler{}, component.WithName("entity"), component.WithNameFunc(strings.ToLower))
+
+	basepart.CreateService("entity")
 }
