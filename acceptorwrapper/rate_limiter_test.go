@@ -107,7 +107,7 @@ func TestRateLimiterGetNextMessage(t *testing.T) {
 			defer ctrl.Finish()
 			mockConn = mocks.NewMockPlayerConn(ctrl)
 
-			r = NewRateLimiter(mockConn, limit, interval, table.forceDisable)
+			r = NewRateLimiter(mockConn, limit, interval, table.forceDisable, nil)
 
 			table.mock()
 			buf, err := r.GetNextMessage()
@@ -162,7 +162,7 @@ func TestRateLimiterShouldRateLimit(t *testing.T) {
 
 	for name, table := range tables {
 		t.Run(name, func(t *testing.T) {
-			r = NewRateLimiter(nil, limit, interval, false)
+			r = NewRateLimiter(nil, limit, interval, false, nil)
 
 			table.before()
 			should := r.shouldRateLimit(now)

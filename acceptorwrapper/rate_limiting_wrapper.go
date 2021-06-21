@@ -42,7 +42,7 @@ func NewRateLimitingWrapper(c *config.Config) *RateLimitingWrapper {
 			forceDisable = c.GetBool("pitaya.conn.ratelimiting.forcedisable")
 		)
 
-		return NewRateLimiter(conn, limit, interval, forceDisable)
+		return NewRateLimiter(conn, limit, interval, forceDisable, nil)
 	})
 
 	return r

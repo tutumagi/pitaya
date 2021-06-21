@@ -24,8 +24,6 @@ import (
 	"container/list"
 	"time"
 
-	"github.com/tutumagi/pitaya/engine/components/app"
-
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
@@ -47,6 +45,8 @@ type RateLimiter struct {
 	interval     time.Duration
 	times        list.List
 	forceDisable bool
+
+	reports []metrics.Reporter
 }
 
 // NewRateLimiter returns an initialized *RateLimiting
@@ -55,12 +55,14 @@ func NewRateLimiter(
 	limit int,
 	interval time.Duration,
 	forceDisable bool,
+	reports []metrics.Reporter,
 ) *RateLimiter {
 	r := &RateLimiter{
 		PlayerConn:   conn,
 		limit:        limit,
 		interval:     interval,
 		forceDisable: forceDisable,
+		reports:      reports,
 	}
 
 	r.times.Init()
@@ -83,7 +85,7 @@ func (r *RateLimiter) GetNextMessage() (msg []byte, err error) {
 		now := time.Now()
 		if r.shouldRateLimit(now) {
 			logger.Log.Errorf("Data=%s, Error=%s", msg, constants.ErrRateLimitExceeded)
-			metrics.ReportExceededRateLimiting(app.GetMetricsReporters())
+			metrics.ReportExceededRateLimiting(r.reports)
 			continue
 		}
 
