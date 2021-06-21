@@ -35,6 +35,7 @@ import (
 	"github.com/tutumagi/pitaya/config"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
+	"github.com/tutumagi/pitaya/engine/bc/baseapp"
 	"github.com/tutumagi/pitaya/engine/common"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
@@ -280,7 +281,7 @@ func Start() {
 
 	// }
 
-	sys := actor.NewActorSystem()
+	actorSystem := actor.NewActorSystem()
 
 	handlerService = NewAppProcessor(
 		app.dieChan,
@@ -292,12 +293,21 @@ func Start() {
 		app.rpcServer,
 		app.serviceDiscovery,
 		app.router,
-		sys,
+		actorSystem,
 	)
 
 	app.rpcServer.SetPitayaServer(handlerService.remote)
 
 	initSysRemotes()
+
+	baseapp.Initialize(
+		app.dieChan,
+		app.rpcClient,
+		app.serializer,
+		app.serviceDiscovery,
+		actorSystem,
+		handlerService.remote,
+	)
 
 	periodicMetrics()
 

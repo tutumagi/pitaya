@@ -32,10 +32,12 @@ func main() {
 func configApp() *viper.Viper {
 	conf := viper.New()
 	conf.SetEnvPrefix("chat") // allows using env vars in the CHAT_PITAYA_ format
-	conf.SetDefault("gate.buffer.handler.localprocess", 15)
-	conf.Set("gate.heartbeat.interval", "15s")
-	conf.Set("gate.buffer.agent.messages", 32)
-	conf.Set("gate.handler.messages.compression", false)
+	conf.SetDefault("pitaya.buffer.handler.localprocess", 15)
+	conf.Set("pitaya.heartbeat.interval", "15s")
+	conf.Set("pitaya.buffer.agent.messages", 32)
+	conf.Set("pitaya.handler.messages.compression", false)
+
+	conf.Set("pitaya.bootentity", "player")
 	return conf
 }
 

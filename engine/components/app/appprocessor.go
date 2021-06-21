@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/golang/protobuf/proto"
 	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/conn/codec"
 	"github.com/tutumagi/pitaya/conn/message"
@@ -15,7 +14,6 @@ import (
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/router"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/timer"
@@ -170,113 +168,6 @@ func (r *AppMsgProcessor) Process(ctx context.Context, req *protos.Request) *pro
 			}
 		}
 	}
-}
-
-func (p *AppMsgProcessor) CallService(ctx context.Context, serviceName string, routeStr string, reply proto.Message, arg proto.Message) error {
-	entityID := common.ServiceID(serviceName)
-	entityType := common.ServiceTypeName(serviceName)
-
-	return p.call(ctx, entityID, entityType, routeStr, reply, arg)
-}
-
-func (p *AppMsgProcessor) SendService(ctx context.Context, serviceName string, routeStr string, arg proto.Message) error {
-	entityID := common.ServiceID(serviceName)
-	entityType := common.ServiceTypeName(serviceName)
-
-	return p.call(ctx, entityID, entityType, routeStr, nil, arg)
-}
-
-func (p *AppMsgProcessor) CallEntity(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	reply proto.Message,
-	arg proto.Message,
-) error {
-	return p.call(ctx, entityID, entityType, routeStr, reply, arg)
-}
-
-func (p *AppMsgProcessor) SendEntity(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	arg proto.Message,
-) error {
-	return p.call(ctx, entityID, entityType, routeStr, nil, arg)
-}
-
-func (p *AppMsgProcessor) call(
-	ctx context.Context,
-	entityID,
-	entityType string,
-	routeStr string,
-	reply proto.Message,
-	arg proto.Message,
-) error {
-	var ret interface{}
-	var err error
-
-	// 本地没有这个实体
-	entity := p.entityManager.GetEntityVal(entityID, entityType)
-	if entity == nil {
-		logger.Log.Warnf("pitaya/local process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
-		droute, err := route.Decode(routeStr)
-		if err != nil {
-			return err
-		}
-		if reply != nil {
-			return p.remote.RPC(ctx, entityID, entityType, "", droute, reply, arg)
-		} else {
-			return p.remote.Send(ctx, entityID, entityType, "", droute, arg)
-		}
-		// return &protos.Response{
-		// 	Error: &protos.Error{
-		// 		Code: e.ErrUnknownCode,
-		// 		Msg:  fmt.Sprintf("entity(id:%s type:%s) not found", entityID, entityType),
-		// 	},
-		// }
-		// err = e.NewError(fmt.Errorf("entity(id:%s type:%s) not found", entityID, entityType), e.ErrUnknownCode)
-		// return err
-	}
-
-	// TODO 本地 call 这里marshal了一次，到实际call方法时，又unmarshal一次，重复了
-	argBytes, _ := p.serializer.Marshal(arg)
-
-	ret, err = p.actorSystem.Root.RequestFuture(
-		p.entityManager.GetEntityPid(entityID, entityType),
-		&common.LocalMessageWrapper{
-			Ctx: ctx,
-			Req: &protos.Request{
-				Type: protos.RPCType_User,
-				Msg: &protos.MsgV2{
-					// Id:    uint64(mid),
-					Route: routeStr,
-					Data:  argBytes,
-					// Type:  protos.MsgType(msg.Type),
-					Eid: entityID,
-					Typ: entityType,
-					// Reply: ,
-				},
-			},
-		},
-		//TODO 这里写的2秒
-		2*time.Second,
-	).Result()
-
-	if err != nil {
-		return err
-	}
-	if reply != nil {
-		err := p.serializer.Unmarshal(ret.([]byte), reply)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
 }
 
 // ret, err := processHandlerMessage(

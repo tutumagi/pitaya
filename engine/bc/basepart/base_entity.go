@@ -14,7 +14,6 @@ import (
 	"github.com/tutumagi/pitaya/agent"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/common"
-	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/dbmgr"
 	"github.com/tutumagi/pitaya/engine/math32"
 	err "github.com/tutumagi/pitaya/errors"
@@ -43,6 +42,8 @@ func newBaseSpaceInfo(id string, kind int32, serverID string) *_BaseSpaceInfo {
 
 // Entity 实体
 type Entity struct {
+	*common.Caller
+
 	UID string // UID 只有在是玩家连接的实体，才有UID，消息收发是靠UID来标识的
 	ID  string // 实体ID，如果是玩家实体，则ID也表示角色ID
 	// Data interface{}
@@ -183,6 +184,8 @@ func (e *Entity) init(id string, typName string, entityInstance reflect.Value) {
 	e.coord = math32.NewVector3(0, 0, 0)
 	// }
 
+	// NOTE: 这个其实每个实体都是公用的Caller
+	e.Caller = common.NewCaller(caller)
 }
 
 func (e *Entity) cancelEnterSpace() {
@@ -955,10 +958,15 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 	if e.UID == "" {
 		return
 	}
-	_, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
+	err := e.client.Push(router, msg)
+	// _, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
 	if err != nil {
 		logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
 	}
+	// _, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
+	// if err != nil {
+	// 	logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
+	// }
 }
 
 // type basePart interface {

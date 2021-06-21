@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tutumagi/pitaya/agent"
+	"github.com/tutumagi/pitaya/cluster"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/math32"
 	"github.com/tutumagi/pitaya/logger"
+	"github.com/tutumagi/pitaya/serialize"
+	"gitlab.gamesword.com/nut/entitygen/attr"
 
 	"github.com/tutumagi/pitaya/protos"
 	"go.uber.org/zap"
@@ -15,12 +19,31 @@ import (
 // Remote 实体相关操作，只允许在业务 app 注册
 type Remote struct {
 	Entity
+
+	// 因为创建远端client，需要下面三个字段，先放到这里，
+	// 见 ClientConnected
+	rpcClient cluster.RPCClient
+	// encoder codec.PacketEncoder,
+	serializer       serialize.Serializer
+	serviceDiscovery cluster.ServiceDiscovery
 }
 
-type RemoteCaller struct{}
+func NewRemote(
+	rpcClient cluster.RPCClient,
+	serializer serialize.Serializer,
+	serviceDiscovery cluster.ServiceDiscovery,
+) *Remote {
+	return &Remote{
+		rpcClient:        rpcClient,
+		serializer:       serializer,
+		serviceDiscovery: serviceDiscovery,
+	}
+}
+
+type EntityHandler struct{}
 
 // DoEnterSpace 玩家进入场景，当cellmgrapp 拿到 场景服的地址后 通知过来的
-func (r *RemoteCaller) DoEnterSpace(ctx context.Context, req *protos.RealEnterSpaceReq) (*protos.Response, error) {
+func (r *EntityHandler) DoEnterSpace(ctx context.Context, req *protos.RealEnterSpaceReq) (*protos.Response, error) {
 	logger.Debug("entity remote do enterspace", zap.String("req", req.String()))
 
 	if req.EntityID == "" || req.SpaceID == "" {
@@ -48,7 +71,7 @@ func (r *RemoteCaller) DoEnterSpace(ctx context.Context, req *protos.RealEnterSp
 }
 
 // EnterSpaceResult 玩家进入场景后的处理，这里主要处理 base 的 实体相关的空间记录
-func (r *RemoteCaller) EnterSpaceResult(ctx context.Context, req *protos.EnterSpaceResultNotify) (*protos.Response, error) {
+func (r *EntityHandler) EnterSpaceResult(ctx context.Context, req *protos.EnterSpaceResultNotify) (*protos.Response, error) {
 	logger.Infof("entity enter space result %s", req.String())
 
 	e := GetEntity(req.EntityLabel, req.EntityID)
@@ -64,7 +87,7 @@ func (r *RemoteCaller) EnterSpaceResult(ctx context.Context, req *protos.EnterSp
 }
 
 // CreateBaseSpaces  在 baseapp 上创建空间
-func (r *RemoteCaller) CreateBaseSpace(
+func (r *EntityHandler) CreateBaseSpace(
 	ctx context.Context,
 	entity interface{},
 	req *protos.CreateBaseSpaceReq,
@@ -79,7 +102,7 @@ func (r *RemoteCaller) CreateBaseSpace(
 
 // CreateBaseSpaces  在 baseapp 上创建空间(新增这个协议是为了不影响之前的流程)
 // 主要用于解决base、cell 和 cellmgr 之间的启动依赖。
-func (r *RemoteCaller) CreateBaseSpaceIfNeed(
+func (r *EntityHandler) CreateBaseSpaceIfNeed(
 	ctx context.Context,
 	entity interface{},
 	req *protos.CreateBaseSpaceReq,
@@ -181,7 +204,7 @@ func (r *RemoteCaller) CreateBaseSpaceIfNeed(
 // }
 
 // DestroyEntity 销毁实体
-func (r *RemoteCaller) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos.Response, error) {
+func (r *EntityHandler) DestroyEntity(ctx context.Context, req *protos.Entity) (*protos.Response, error) {
 	// app.GroupRemoveMember(ctx, groupName, req.Uid)
 
 	e := GetEntity(req.Label, req.Id)
@@ -194,7 +217,7 @@ func (r *RemoteCaller) DestroyEntity(ctx context.Context, req *protos.Entity) (*
 	return &protos.Response{}, nil
 }
 
-func (r *RemoteCaller) CreateEntity(ctx context.Context, req *protos.SEntityData) (*protos.Response, error) {
+func (r *EntityHandler) CreateEntity(ctx context.Context, req *protos.SEntityData) (*protos.Response, error) {
 	ent := GetEntity(req.EntityLabel, req.EntityID)
 
 	// 如果该Server 没有该实体， 则拿到迁移数据进行 重建实体，这里重建实体不包括timer，只包括数据
@@ -202,9 +225,13 @@ func (r *RemoteCaller) CreateEntity(ctx context.Context, req *protos.SEntityData
 	if typDesc == nil {
 		return nil, fmt.Errorf("没有该实体类型 %s", req.EntityLabel)
 	}
-	attrs, err := typDesc.UnmarshalJSON(req.EntityDatas)
-	if err != nil {
-		return nil, fmt.Errorf("数据解析错误")
+	var attrs *attr.StrMap
+	var err error
+	if req.EntityDatas != nil {
+		attrs, err = typDesc.UnmarshalJSON(req.EntityDatas)
+		if err != nil {
+			return nil, fmt.Errorf("实体数据解析错误")
+		}
 	}
 
 	ent = baseEntManager.CreateEntity(
@@ -229,15 +256,27 @@ func (r *RemoteCaller) CreateEntity(ctx context.Context, req *protos.SEntityData
 	return &protos.Response{}, nil
 }
 
-// func (r *RemoteCaller) ClientConnected(ctx context.Context, req *protos.ClientConnect) (*protos.Response, error) {
+func (r *EntityHandler) ClientConnected(ctx context.Context, entity interface{}, req *protos.ClientConnect) (*protos.Response, error) {
+	entityService := entity.(*Remote)
+	client, _ := agent.NewRemote(
+		req.Sess.Id,
+		req.Sess.ServerID,
+		req.Sess.Uid,
+		req.Sess.RoleID,
+		entityService.rpcClient,
+		entityService.serializer,
+		entityService.serviceDiscovery,
+	)
+	// TODO 用配置表
+	// bootEntityType := app.config.GetString("pitaya.bootentity")
+	bootEntityType := "acount"
+	e := CreateEntity(bootEntityType, req.BootEntityID, nil, false)
+	e.SetClient(client)
 
-// 	// client := agent.NewRemote(
-// 	// 	req.Sess,
+	return &protos.Response{}, nil
+}
 
-// 	// )
-// }
-
-func (r *RemoteCaller) createBaseSpaceFromRemote(entity interface{}, req *protos.CreateBaseSpaceReq) error {
+func (r *EntityHandler) createBaseSpaceFromRemote(entity interface{}, req *protos.CreateBaseSpaceReq) error {
 	caller := entity.(*Entity)
 	logger.Infof("create base space. id:%s kind:%d cellServerID:%s", req.SpaceID, req.SpaceKind, req.CellServerID)
 	space := CreateSpace(req.SpaceKind, req.SpaceID, req.CellServerID)

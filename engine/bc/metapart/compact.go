@@ -14,7 +14,7 @@ const (
 	MasterSpaceKind = 1
 )
 
-const GateAppSvr = "baseapp"
+const GateAppSvr = "gateapp"
 
 // 玩家进入/切换场景返回的路由
 const RouterAvatarEnterScene = "avatar.enterscene"

@@ -23,7 +23,6 @@ package agent
 import (
 	"context"
 	"net"
-	"reflect"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/tutumagi/pitaya/cluster"
@@ -99,8 +98,7 @@ func (a *Remote) Kick(ctx context.Context) error {
 
 // Push pushes the message to the user
 func (a *Remote) Push(route string, v interface{}) error {
-	if (reflect.TypeOf(a.rpcClient) == reflect.TypeOf(&cluster.NatsRPCClient{}) &&
-		a.uid == "") {
+	if a.uid == "" {
 		return constants.ErrNoUIDBind
 	}
 	switch d := v.(type) {

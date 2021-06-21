@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/opentracing/opentracing-go"
 	"github.com/tutumagi/pitaya/acceptor"
@@ -18,6 +19,7 @@ import (
 	"github.com/tutumagi/pitaya/conn/packet"
 	"github.com/tutumagi/pitaya/constants"
 	pcontext "github.com/tutumagi/pitaya/context"
+	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/common"
 	services "github.com/tutumagi/pitaya/engine/common"
 
@@ -64,6 +66,8 @@ type GateProcessor struct {
 
 	entityManager common.EntityManager
 	actorSystem   *actor.ActorSystem
+
+	caller *common.Caller
 }
 
 func NewGateProcessor(
@@ -104,6 +108,7 @@ func NewGateProcessor(
 		actorSystem: system,
 	}
 
+	p.caller = common.NewCaller(p)
 	return p
 }
 
@@ -203,6 +208,30 @@ func (h GateProcessor) processPacket(a *agent.Agent, p *packet.Packet) error {
 		// logger.Log.Infof("pitaya.handler end to processPacket :handshake ACK for SessionID=%d, UID=%s", a.Session.ID(), a.Session.UID())
 
 		// 连接连成功了
+		// bootEntityType := app.config.GetString("pitaya.bootentity")
+		a.OwnerEntityID = metapart.NewUUID()
+
+		// TODO 这里写死请求到某个服务类型
+		err := h.caller.CallService(
+			context.TODO(),
+			"entity",
+			"baseapp.entity.createentity",
+			&protos.Response{},
+			&protos.ClientConnect{
+				Sess: &protos.Session{
+					Id:       a.Session.ID(),
+					Uid:      a.Session.UID(),
+					RoleID:   a.Session.RoleID(),
+					ServerID: app.server.ID,
+				},
+				BootEntityID: a.OwnerEntityID,
+			},
+		)
+		if err != nil {
+			logger.Errorf("创建bootEntity失败 %s", err)
+		} else {
+			logger.Debugf("创建bootEntity成功")
+		}
 		// a.ownerEntityID
 		// RPC(context.TODO(), )
 		// bootEntityID :=
@@ -397,5 +426,26 @@ func (p GateProcessor) localProcess(ctx context.Context, a *agent.Agent, route *
 	} else {
 		metrics.ReportTimingFromCtx(ctx, p.metricsReporters, common.HandlerType, nil)
 		tracing.FinishSpan(ctx, err)
+	}
+}
+
+func (p GateProcessor) Call(
+	ctx context.Context,
+	serverID string,
+	entityID,
+	entityType string,
+	routeStr string,
+	reply proto.Message,
+	arg proto.Message,
+) error {
+	logger.Log.Warnf("pitaya/remote process message to entity: entity(id:%s type:%s) not found", entityID, entityType)
+	droute, err := route.Decode(routeStr)
+	if err != nil {
+		return err
+	}
+	if reply != nil {
+		return p.remote.RPC(ctx, entityID, entityType, "", droute, reply, arg)
+	} else {
+		return p.remote.Send(ctx, entityID, entityType, "", droute, arg)
 	}
 }

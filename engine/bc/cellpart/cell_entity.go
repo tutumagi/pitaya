@@ -14,7 +14,6 @@ import (
 	"github.com/tutumagi/pitaya/engine/aoi"
 	"github.com/tutumagi/pitaya/engine/bc/metapart"
 	"github.com/tutumagi/pitaya/engine/common"
-	"github.com/tutumagi/pitaya/engine/components/app"
 	"github.com/tutumagi/pitaya/engine/math32"
 	err "github.com/tutumagi/pitaya/errors"
 	"github.com/tutumagi/pitaya/logger"
@@ -285,7 +284,7 @@ func (e *Entity) PushOwnClient(router string, msg interface{}) {
 	if e.UID == "" {
 		return
 	}
-	_, err := app.SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
+	_, err := SendPushToUsers(router, msg, []string{e.UID}, metapart.GateAppSvr)
 	if err != nil {
 		logger.Errorf("push own client(uid:%s) err:%s", e.UID, err)
 	}
@@ -309,7 +308,7 @@ func (e *Entity) PushNeighbourClient(router string, msg interface{}) {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			_, err := app.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
+			_, err := SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
 			if err != nil {
 				logger.Errorf("push neighbour client(uid:%s) err:%s", other.UID, err)
 			}
@@ -418,7 +417,7 @@ func (e *Entity) PushInterestin(router string, msg interface{}) {
 				logger.Warn("typename is player, but uid is empty", zap.String("entity", other.String()))
 				return
 			}
-			app.SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
+			SendPushToUsers(router, msg, []string{other.UID}, metapart.GateAppSvr)
 		}
 	}
 }

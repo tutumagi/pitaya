@@ -139,7 +139,7 @@ func (r *Caller) Process(ctx context.Context, req *protos.Request) *protos.Respo
 	}
 }
 
-func (p *Caller) call(
+func (p *Caller) Call(
 	ctx context.Context,
 	serverID string,
 	entityID,
