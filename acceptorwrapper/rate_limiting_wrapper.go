@@ -23,6 +23,7 @@ package acceptorwrapper
 import (
 	"github.com/tutumagi/pitaya/acceptor"
 	"github.com/tutumagi/pitaya/config"
+	"github.com/tutumagi/pitaya/metrics"
 )
 
 // RateLimitingWrapper rate limits for each connection
@@ -32,7 +33,7 @@ type RateLimitingWrapper struct {
 }
 
 // NewRateLimitingWrapper returns an instance of *RateLimitingWrapper
-func NewRateLimitingWrapper(c *config.Config) *RateLimitingWrapper {
+func NewRateLimitingWrapper(c *config.Config, reports []metrics.Reporter) *RateLimitingWrapper {
 	r := &RateLimitingWrapper{}
 
 	r.BaseWrapper = NewBaseWrapper(func(conn acceptor.PlayerConn) acceptor.PlayerConn {
@@ -42,7 +43,7 @@ func NewRateLimitingWrapper(c *config.Config) *RateLimitingWrapper {
 			forceDisable = c.GetBool("pitaya.conn.ratelimiting.forcedisable")
 		)
 
-		return NewRateLimiter(conn, limit, interval, forceDisable, nil)
+		return NewRateLimiter(conn, limit, interval, forceDisable, reports)
 	})
 
 	return r

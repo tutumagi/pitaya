@@ -40,7 +40,7 @@ func TestNewRateLimitingWrapper(t *testing.T) {
 		return config.NewConfig(c)
 	}
 
-	rateLimitingWrapper := NewRateLimitingWrapper(getConfig())
+	rateLimitingWrapper := NewRateLimitingWrapper(getConfig(), nil)
 	expected := NewRateLimiter(nil, 20, time.Second, false, nil)
 	assert.Equal(t, expected, rateLimitingWrapper.wrapConn(nil))
 }
