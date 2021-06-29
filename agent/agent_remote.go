@@ -39,7 +39,7 @@ import (
 type Remote struct {
 	frontSessID int64
 	uid         string
-	chDie chan struct{} // wait for close
+	chDie       chan struct{} // wait for close
 	// messageEncoder message.Encoder
 	// encoder    codec.PacketEncoder // binary encoder
 	frontendID string // the frontend that sent the request
@@ -200,4 +200,28 @@ func (a *Remote) SendRequest(ctx context.Context, entityID, entityType, serverID
 		return nil, err
 	}
 	return a.rpcClient.Call(ctx, protos.RPCType_User, r, nil, msg, server)
+}
+
+// SendRequest sends a request to a server
+func (a *Remote) Bind(ctx context.Context, uid string) error {
+	a.uid = uid
+	route := constants.SessionBindRoute
+	sessionData := &protos.Session{
+		Id:  a.frontSessID,
+		Uid: a.uid,
+	}
+
+	b, err := proto.Marshal(sessionData)
+	if err != nil {
+		a.uid = ""
+		return err
+	}
+	// TODO 这里没有entityID和entityType
+	res, err := a.SendRequest(ctx, "", "", a.frontendID, route, b)
+	if err != nil {
+		a.uid = ""
+		return err
+	}
+	logger.Log.Debugf("bind uid(%s) response: %+v", uid, res)
+	return nil
 }
