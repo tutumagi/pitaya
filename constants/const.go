@@ -33,8 +33,8 @@ const (
 )
 
 const (
-	// SessionPushRoute is the route used for updating session
-	SessionPushRoute = "sys.pushsession"
+	// SessionSwithOwnerRoute is the route used for switching session route
+	SessionSwithOwnerRoute = "sys.switchsessionowner"
 
 	// SessionBindRoute is the route used for binding session
 	SessionBindRoute = "sys.bindsession"

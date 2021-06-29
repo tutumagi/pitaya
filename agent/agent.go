@@ -109,9 +109,6 @@ type (
 		metricsReporters   []metrics.Reporter
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
-
-		// 和哪个 EntityID 绑定在一起
-		OwnerEntityID string
 	}
 
 	pendingMessage struct {

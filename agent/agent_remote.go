@@ -38,11 +38,10 @@ import (
 // Remote corresponding to another server
 type Remote struct {
 	frontSessID int64
+	frontendID  string // the frontend that sent the request
 	uid         string
-	chDie       chan struct{} // wait for close
-	// messageEncoder message.Encoder
-	// encoder    codec.PacketEncoder // binary encoder
-	frontendID string // the frontend that sent the request
+	ownerID     string
+	ownerType   string
 
 	rpcClient        cluster.RPCClient        // rpc client
 	serializer       serialize.Serializer     // message serializer
@@ -54,19 +53,20 @@ func NewRemote(
 	frontSessID int64,
 	frontServerID string,
 	uid string,
+	ownerID string,
+	ownerType string,
+
 	rpcClient cluster.RPCClient,
-	// encoder codec.PacketEncoder,
 	serializer serialize.Serializer,
 	serviceDiscovery cluster.ServiceDiscovery,
-	// frontendID string,
-	// messageEncoder message.Encoder,
 ) (*Remote, error) {
 	a := &Remote{
 		frontSessID: frontSessID,
 		frontendID:  frontServerID,
 		uid:         uid,
-		chDie:       make(chan struct{}),
 		serializer:  serializer,
+		ownerID:     ownerID,
+		ownerType:   ownerType,
 		// encoder:          encoder,
 		rpcClient:        rpcClient,
 		serviceDiscovery: serviceDiscovery,
@@ -223,5 +223,38 @@ func (a *Remote) Bind(ctx context.Context, uid string) error {
 		return err
 	}
 	logger.Log.Debugf("bind uid(%s) response: %+v", uid, res)
+	return nil
+}
+
+// SendRequest sends a request to a server
+func (a *Remote) SwitchOwner(ctx context.Context, ownerID string, ownerType string) error {
+	if a.ownerID == ownerID && a.ownerType == ownerType {
+		return nil
+	}
+	route := constants.SessionSwithOwnerRoute
+	msg := &protos.SwitchOwner{
+		Sess: &protos.Session{
+			Id:       a.frontSessID,
+			Uid:      a.uid,
+			ServerID: a.frontendID,
+		},
+		Id:   ownerID,
+		Type: ownerType,
+	}
+
+	logger.Log.Debugf("SwitchOwner (%s) ", msg.String())
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	res, err := a.SendRequest(ctx, "", "", a.frontendID, route, b)
+	if err != nil {
+		return err
+	}
+	logger.Log.Debugf("SwitchOwner (%s) response: %+v", msg.String(), res)
+
+	a.ownerID = ownerID
+	a.ownerType = ownerType
+
 	return nil
 }

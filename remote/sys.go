@@ -66,3 +66,14 @@ func (s *Sys) Kick(ctx context.Context, msg *protos.KickMsg) (*protos.KickAnswer
 	res.Kicked = true
 	return res, nil
 }
+
+// SwitchSessionOwner switch session owner
+func (s *Sys) SwitchSessionOwner(ctx context.Context, msg *protos.SwitchOwner) (*protos.Response, error) {
+	sess := session.GetSessionByUID(msg.Sess.Uid)
+	if sess == nil {
+		return nil, constants.ErrSessionNotFound
+	}
+	sess.SwitchOwner(msg.Id, msg.Type)
+
+	return &protos.Response{}, nil
+}

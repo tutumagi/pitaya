@@ -58,7 +58,6 @@ func TestNewRemote(t *testing.T) {
 	remote, err := NewRemote(0, frontendID, uid, mockRPCClient, mockSerializer, mockSD)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
-	assert.IsType(t, make(chan struct{}), remote.chDie)
 	assert.Equal(t, mockSerializer, remote.serializer)
 	assert.Equal(t, mockRPCClient, remote.rpcClient)
 	assert.Equal(t, mockSD, remote.serviceDiscovery)

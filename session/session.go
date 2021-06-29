@@ -80,11 +80,15 @@ type HandshakeData struct {
 // Session instance related to the client will be passed to Handler method in the
 // context parameter.
 type Session struct {
-	sync.RWMutex               // protect data
-	id           int64         // session global unique id
-	uid          string        // binding user id
-	lastTime     int64         // last heartbeat time
-	network      NetworkEntity // low-level network entity
+	sync.RWMutex        // protect data
+	id           int64  // session global unique id
+	uid          string // binding user id
+	// 和哪个 EntityID 绑定在一起
+	ownerEntityID   string
+	ownerEntityType string
+
+	lastTime int64         // last heartbeat time
+	network  NetworkEntity // low-level network entity
 	// data              map[string]interface{} // session data store
 	handshakeData *HandshakeData // handshake data received by the client
 	// encodedData       []byte               // session data encoded as a byte array
@@ -247,17 +251,24 @@ func (s *Session) UID() string {
 	return s.uid
 }
 
-// // RoleID 返回角色ID
-// func (s *Session) RoleID() string {
-// 	return s.roleID
-// }
+func (s *Session) OwnerEntityID() string {
+	return s.ownerEntityID
+}
 
-// // SetRoleID 设置角色ID
-// func (s *Session) SetRoleID(rid string) {
-// 	s.roleID = rid
+func (s *Session) OwnerEntityType() string {
+	return s.ownerEntityType
+}
 
-// 	sessionsByRoleID.Store(rid, s)
-// }
+func (s *Session) Owner() (ownerID string, ownerType string) {
+	return s.ownerEntityID, s.ownerEntityType
+}
+
+func (s *Session) SwitchOwner(id string, typ string) {
+	logger.Infof("session switch owner old id:%s typ:%s", s.ownerEntityID, s.ownerEntityType)
+	s.ownerEntityID = id
+	s.ownerEntityType = typ
+	logger.Infof("session switch owner new id:%s typ:%s", id, typ)
+}
 
 // SetFrontendData sets frontend id and session id
 func (s *Session) SetFrontendData(frontendID string, frontendSessionID int64) {

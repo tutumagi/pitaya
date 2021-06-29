@@ -194,6 +194,69 @@ func (x *ClientDisconnect) GetOwnEntityID() string {
 	return ""
 }
 
+type SwitchOwner struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Sess *Session `protobuf:"bytes,1,opt,name=sess,proto3" json:"sess,omitempty"`
+	Id   string   `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Type string   `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+}
+
+func (x *SwitchOwner) Reset() {
+	*x = SwitchOwner{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_session_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SwitchOwner) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SwitchOwner) ProtoMessage() {}
+
+func (x *SwitchOwner) ProtoReflect() protoreflect.Message {
+	mi := &file_session_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SwitchOwner.ProtoReflect.Descriptor instead.
+func (*SwitchOwner) Descriptor() ([]byte, []int) {
+	return file_session_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SwitchOwner) GetSess() *Session {
+	if x != nil {
+		return x.Sess
+	}
+	return nil
+}
+
+func (x *SwitchOwner) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SwitchOwner) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
 var File_session_proto protoreflect.FileDescriptor
 
 var file_session_proto_rawDesc = []byte{
@@ -214,9 +277,15 @@ var file_session_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2e, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x04, 0x73,
 	0x65, 0x73, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x6f, 0x77, 0x6e, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79,
 	0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x6f, 0x77, 0x6e, 0x45, 0x6e, 0x74,
-	0x69, 0x74, 0x79, 0x49, 0x44, 0x42, 0x1b, 0x5a, 0x08, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x73, 0xaa, 0x02, 0x0e, 0x4e, 0x50, 0x69, 0x74, 0x61, 0x79, 0x61, 0x2e, 0x50, 0x72, 0x6f, 0x74,
-	0x6f, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x69, 0x74, 0x79, 0x49, 0x44, 0x22, 0x56, 0x0a, 0x0b, 0x53, 0x77, 0x69, 0x74, 0x63, 0x68, 0x4f,
+	0x77, 0x6e, 0x65, 0x72, 0x12, 0x23, 0x0a, 0x04, 0x73, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2e, 0x53, 0x65, 0x73, 0x73,
+	0x69, 0x6f, 0x6e, 0x52, 0x04, 0x73, 0x65, 0x73, 0x73, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70,
+	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x42, 0x1b, 0x5a,
+	0x08, 0x2e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0xaa, 0x02, 0x0e, 0x4e, 0x50, 0x69, 0x74,
+	0x61, 0x79, 0x61, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -231,20 +300,22 @@ func file_session_proto_rawDescGZIP() []byte {
 	return file_session_proto_rawDescData
 }
 
-var file_session_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_session_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_session_proto_goTypes = []interface{}{
 	(*Session)(nil),          // 0: protos.Session
 	(*ClientConnect)(nil),    // 1: protos.ClientConnect
 	(*ClientDisconnect)(nil), // 2: protos.ClientDisconnect
+	(*SwitchOwner)(nil),      // 3: protos.SwitchOwner
 }
 var file_session_proto_depIdxs = []int32{
 	0, // 0: protos.ClientConnect.sess:type_name -> protos.Session
 	0, // 1: protos.ClientDisconnect.sess:type_name -> protos.Session
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 2: protos.SwitchOwner.sess:type_name -> protos.Session
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_session_proto_init() }
@@ -289,6 +360,18 @@ func file_session_proto_init() {
 				return nil
 			}
 		}
+		file_session_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SwitchOwner); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -296,7 +379,7 @@ func file_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_session_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
