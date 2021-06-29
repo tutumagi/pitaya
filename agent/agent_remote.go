@@ -39,8 +39,6 @@ import (
 type Remote struct {
 	frontSessID int64
 	uid         string
-	rid         string
-
 	chDie chan struct{} // wait for close
 	// messageEncoder message.Encoder
 	// encoder    codec.PacketEncoder // binary encoder
@@ -56,7 +54,6 @@ func NewRemote(
 	frontSessID int64,
 	frontServerID string,
 	uid string,
-	rid string,
 	rpcClient cluster.RPCClient,
 	// encoder codec.PacketEncoder,
 	serializer serialize.Serializer,
@@ -68,7 +65,6 @@ func NewRemote(
 		frontSessID: frontSessID,
 		frontendID:  frontServerID,
 		uid:         uid,
-		rid:         rid,
 		chDie:       make(chan struct{}),
 		serializer:  serializer,
 		// encoder:          encoder,

@@ -136,7 +136,7 @@ func Init(serverType string, config *viper.Viper) {
 
 	// sugar.Infof("setup logger")
 
-	// logger.SetLogger(l)
+	SetLogger(l)
 	l.Info("initialize logger")
 }
 

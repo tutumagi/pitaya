@@ -54,7 +54,6 @@ var (
 	SessionCloseCallbacks = make([]func(s *Session), 0)
 	sessionsByUID         sync.Map
 	sessionsByID          sync.Map
-	sessionsByRoleID      sync.Map
 	sessionIDSvc          = newSessionIDService()
 	// SessionCount keeps the current number of sessions
 	SessionCount int64
@@ -94,8 +93,6 @@ type Session struct {
 	frontendID        string               // the id of the frontend that owns the session
 	frontendSessionID int64                // the id of the session on the frontend server
 	Subscriptions     []*nats.Subscription // subscription created on bind when using nats rpc server
-
-	roleID string // 角色ID
 }
 
 type sessionIDService struct {
@@ -148,15 +145,6 @@ func GetSessionByUID(uid string) *Session {
 func GetSessionByID(id int64) *Session {
 	// TODO: Block this operation in backend servers
 	if val, ok := sessionsByID.Load(id); ok {
-		return val.(*Session)
-	}
-	return nil
-}
-
-// GetSessionByRoleID 根据角色id 返回session
-func GetSessionByRoleID(roleID string) *Session {
-	// TODO: Block this operation in backend servers
-	if val, ok := sessionsByRoleID.Load(roleID); ok {
 		return val.(*Session)
 	}
 	return nil
@@ -259,51 +247,16 @@ func (s *Session) UID() string {
 	return s.uid
 }
 
-// RoleID 返回角色ID
-func (s *Session) RoleID() string {
-	return s.roleID
-}
-
-// SetRoleID 设置角色ID
-func (s *Session) SetRoleID(rid string) {
-	s.roleID = rid
-
-	sessionsByRoleID.Store(rid, s)
-}
-
-// // GetData gets the data
-// func (s *Session) GetData() map[string]interface{} {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	return s.data
+// // RoleID 返回角色ID
+// func (s *Session) RoleID() string {
+// 	return s.roleID
 // }
 
-// // SetData sets the whole session data
-// func (s *Session) SetData(data map[string]interface{}) error {
-// 	s.Lock()
-// 	defer s.Unlock()
+// // SetRoleID 设置角色ID
+// func (s *Session) SetRoleID(rid string) {
+// 	s.roleID = rid
 
-// 	s.data = data
-// 	return s.updateEncodedData()
-// }
-
-// // GetDataEncoded returns the session data as an encoded value
-// func (s *Session) GetDataEncoded() []byte {
-// 	return s.encodedData
-// }
-
-// // SetDataEncoded sets the whole session data from an encoded value
-// func (s *Session) SetDataEncoded(encodedData []byte) error {
-// 	if len(encodedData) == 0 {
-// 		return nil
-// 	}
-// 	var data map[string]interface{}
-// 	err := dataDecoder(encodedData, &data)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return s.SetData(data)
+// 	sessionsByRoleID.Store(rid, s)
 // }
 
 // SetFrontendData sets frontend id and session id
@@ -380,7 +333,6 @@ func (s *Session) Close() {
 	atomic.AddInt64(&SessionCount, -1)
 	sessionsByID.Delete(s.ID())
 	sessionsByUID.Delete(s.UID())
-	sessionsByRoleID.Delete(s.RoleID())
 	// TODO: this logic should be moved to nats rpc server
 	if s.IsFrontend && s.Subscriptions != nil && len(s.Subscriptions) > 0 {
 		// if the user is bound to an userid and nats rpc server is being used we need to unsubscribe
@@ -401,285 +353,9 @@ func (s *Session) RemoteAddr() net.Addr {
 	return s.network.RemoteAddr()
 }
 
-// // Remove delete data associated with the key from session storage
-// func (s *Session) Remove(key string) error {
-// 	s.Lock()
-// 	defer s.Unlock()
-
-// 	delete(s.data, key)
-// 	return s.updateEncodedData()
-// }
-
-// // Set associates value with the key in session storage
-// func (s *Session) Set(key string, value interface{}) error {
-// 	s.Lock()
-// 	defer s.Unlock()
-
-// 	s.data[key] = value
-// 	return s.updateEncodedData()
-// }
-
-// // HasKey decides whether a key has associated value
-// func (s *Session) HasKey(key string) bool {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	_, has := s.data[key]
-// 	return has
-// }
-
-// // Get returns a key value
-// func (s *Session) Get(key string) interface{} {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return v
-// }
-
-// // Int returns the value associated with the key as a int.
-// func (s *Session) Int(key string) int {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(int)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Int8 returns the value associated with the key as a int8.
-// func (s *Session) Int8(key string) int8 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(int8)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Int16 returns the value associated with the key as a int16.
-// func (s *Session) Int16(key string) int16 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(int16)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Int32 returns the value associated with the key as a int32.
-// func (s *Session) Int32(key string) int32 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(int32)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Int64 returns the value associated with the key as a int64.
-// func (s *Session) Int64(key string) int64 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(int64)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Uint returns the value associated with the key as a uint.
-// func (s *Session) Uint(key string) uint {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(uint)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Uint8 returns the value associated with the key as a uint8.
-// func (s *Session) Uint8(key string) uint8 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(uint8)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Uint16 returns the value associated with the key as a uint16.
-// func (s *Session) Uint16(key string) uint16 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(uint16)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Uint32 returns the value associated with the key as a uint32.
-// func (s *Session) Uint32(key string) uint32 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(uint32)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Uint64 returns the value associated with the key as a uint64.
-// func (s *Session) Uint64(key string) uint64 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(uint64)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Float32 returns the value associated with the key as a float32.
-// func (s *Session) Float32(key string) float32 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(float32)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // Float64 returns the value associated with the key as a float64.
-// func (s *Session) Float64(key string) float64 {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return 0
-// 	}
-
-// 	value, ok := v.(float64)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return value
-// }
-
-// // String returns the value associated with the key as a string.
-// func (s *Session) String(key string) string {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	v, ok := s.data[key]
-// 	if !ok {
-// 		return ""
-// 	}
-
-// 	value, ok := v.(string)
-// 	if !ok {
-// 		return ""
-// 	}
-// 	return value
-// }
-
-// // Value returns the value associated with the key as a interface{}.
-// func (s *Session) Value(key string) interface{} {
-// 	s.RLock()
-// 	defer s.RUnlock()
-
-// 	return s.data[key]
-// }
-
 func (s *Session) bindInFront(ctx context.Context) error {
 	return s.sendRequestToFront(ctx, constants.SessionBindRoute, false)
 }
-
-// // PushToFront updates the session in the frontend
-// func (s *Session) PushToFront(ctx context.Context) error {
-// 	if s.IsFrontend {
-// 		return constants.ErrFrontSessionCantPushToFront
-// 	}
-// 	return s.sendRequestToFront(ctx, constants.SessionPushRoute, true)
-// }
 
 // Clear releases all data related to current session
 func (s *Session) Clear() {
@@ -687,8 +363,6 @@ func (s *Session) Clear() {
 	defer s.Unlock()
 
 	s.uid = ""
-	// s.data = map[string]interface{}{}
-	// s.updateEncodedData()
 }
 
 // SetHandshakeData sets the handshake data received by the client.
@@ -706,9 +380,8 @@ func (s *Session) GetHandshakeData() *HandshakeData {
 
 func (s *Session) sendRequestToFront(ctx context.Context, route string, includeData bool) error {
 	sessionData := &protos.Session{
-		Id:     s.frontendSessionID,
-		Uid:    s.uid,
-		RoleID: s.roleID,
+		Id:  s.frontendSessionID,
+		Uid: s.uid,
 	}
 	if includeData {
 		// sessionData.Data = s.encodedData
@@ -727,5 +400,5 @@ func (s *Session) sendRequestToFront(ctx context.Context, route string, includeD
 }
 
 func (s *Session) DebugString() string {
-	return fmt.Sprintf("(ID:%d UID:%s RID:%s)", s.id, s.uid, s.roleID)
+	return fmt.Sprintf("(ID:%d UID:%s)", s.id, s.uid)
 }

@@ -129,9 +129,8 @@ func buildRequest(
 		}
 		req.Msg.Id = uint64(mid)
 		req.Session = &protos.Session{
-			Id:     session.ID(),
-			Uid:    session.UID(),
-			RoleID: session.RoleID(),
+			Id:  session.ID(),
+			Uid: session.UID(),
 		}
 	}
 

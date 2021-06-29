@@ -149,3 +149,6 @@ serializer-mock:
 
 acceptor-mock:
 	@mockgen github.com/tutumagi/pitaya/acceptor Acceptor | sed 's/mock_acceptor/mocks/' > mocks/acceptor.go
+
+cluster-mock:
+	@mockgen github.com/tutumagi/pitaya/cluster RPCServer,RPCClient,SDListener,InfoRetriever,RemoteBindingListener| sed 's/mock_cluster/mocks/' > cluster/mocks/cluster.go
