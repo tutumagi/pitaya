@@ -192,7 +192,7 @@ func TestEtcdSDDeleteServer(t *testing.T) {
 			assert.False(t, ok)
 			assert.Nil(t, generatedSv)
 			_, err = e.GetServersByType(table.server.Type)
-			assert.EqualError(t, constants.ErrNoServersAvailableOfType, err.Error())
+			assert.EqualError(t, constants.ErrNoServersAvailableOfType(table.server.Type), err.Error())
 		})
 	}
 }
