@@ -303,7 +303,7 @@ func (sd *etcdServiceDiscovery) GetServersByType(serverType string) (map[string]
 		}
 		return ret, nil
 	}
-	return nil, constants.ErrNoServersAvailableOfType
+	return nil, constants.ErrNoServersAvailableOfType(serverType)
 }
 
 // GetServers returns a slice with all the servers
