@@ -25,6 +25,7 @@ import (
 
 	"github.com/tutumagi/pitaya/component"
 	"github.com/tutumagi/pitaya/constants"
+	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/session"
 )
@@ -45,6 +46,7 @@ func (s *Sys) BindSession(ctx context.Context, sessionData *protos.Session) (*pr
 		return nil, constants.ErrSessionNotFound
 	}
 	if err := sess.Bind(ctx, sessionData.Uid); err != nil {
+		logger.Warnf("bind err:%s", err)
 		return nil, err
 	}
 	return &protos.Response{Data: []byte("ack")}, nil

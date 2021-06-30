@@ -197,16 +197,6 @@ func CloseAll() {
 	logger.Log.Info("finished closing sessions")
 }
 
-// func (s *Session) updateEncodedData() error {
-// 	var b []byte
-// 	b, err := dataEncoder(s.data)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	s.encodedData = b
-// 	return nil
-// }
-
 // DataEncoder 自定义session data encoder
 type DataEncoder func(data interface{}) ([]byte, error)
 
@@ -278,6 +268,7 @@ func (s *Session) Bind(ctx context.Context, uid string) error {
 		err := cb(ctx, s)
 		if err != nil {
 			s.uid = ""
+			logger.Warnf("call session bind callbacks err:%s", err)
 			return err
 		}
 	}
@@ -286,6 +277,7 @@ func (s *Session) Bind(ctx context.Context, uid string) error {
 		err := cb(ctx, s)
 		if err != nil {
 			s.uid = ""
+			logger.Warnf("call session after bind callbacks err:%s", err)
 			return err
 		}
 	}
@@ -314,6 +306,7 @@ func (s *Session) OnClose(c func()) {
 // Close terminates current session, session related data will not be released,
 // all related data should be cleared explicitly in Session closed callback
 func (s *Session) Close() {
+	logger.Infof("session close. %s", s.DebugString())
 	atomic.AddInt64(&SessionCount, -1)
 	sessionsByID.Delete(s.ID())
 	sessionsByUID.Delete(s.UID())

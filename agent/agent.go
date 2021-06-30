@@ -440,6 +440,7 @@ func (a *Agent) Kick(ctx context.Context) error {
 		return err
 	}
 	_, err = a.conn.Write(p)
+	logger.Warnf("kick agent(sess:%s) err:%s", a.Session.DebugString(), err)
 	return err
 }
 
@@ -455,11 +456,6 @@ func (a *Agent) SetStatus(state int32) {
 
 // Handle handles the messages from and to a client
 func (a *Agent) Handle() {
-	defer func() {
-		a.CloseByReason(AgentCloseByHandleEnd)
-		logger.Log.Debugf("Session handle goroutine exit, SessionID=%d, UID=%d", a.Session.ID(), a.Session.UID())
-	}()
-
 	// 处理写
 	go a.write()
 	// 处理心跳
