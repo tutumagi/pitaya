@@ -111,7 +111,6 @@ func TestNewAgent(t *testing.T) {
 	assert.Equal(t, mockMetricsReporters, ag.metricsReporters)
 	assert.Equal(t, constants.StatusStart, ag.state)
 	assert.NotNil(t, ag.Session)
-	assert.True(t, ag.Session.IsFrontend)
 
 	// second call should no call hdb encode
 	mockMetricsReporter.EXPECT().ReportGauge(metrics.ConnectedClients, gomock.Any(), gomock.Any())
@@ -217,7 +216,7 @@ func TestAgentSendSerializeErr(t *testing.T) {
 		serializer:       mockSerializer,
 		messageEncoder:   messageEncoder,
 		metricsReporters: mockMetricsReporters,
-		Session:          session.New(nil, true),
+		Session:          session.New(nil),
 	}
 
 	ctx := getCtxWithRequestKeys()
@@ -586,8 +585,7 @@ func TestAgentClose(t *testing.T) {
 
 	expected := false
 	f := func() { expected = true }
-	err := ag.Session.OnClose(f)
-	assert.NoError(t, err)
+	ag.Session.OnClose(f)
 
 	// validate channels are closed
 	stopWrite := false
@@ -608,7 +606,7 @@ func TestAgentClose(t *testing.T) {
 
 	mockConn.EXPECT().RemoteAddr()
 	mockConn.EXPECT().Close()
-	err = ag.Close()
+	err := ag.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, ag.state, constants.StatusClosed)
 	assert.True(t, expected)
@@ -738,27 +736,25 @@ func TestAgentSetStatus(t *testing.T) {
 }
 
 func TestOnSessionClosed(t *testing.T) {
-	ss := session.New(nil, true)
+	ss := session.New(nil)
 
 	expected := false
 	f := func() { expected = true }
-	err := ss.OnClose(f)
-	assert.NoError(t, err)
+	ss.OnClose(f)
 
 	assert.NotPanics(t, func() { onSessionClosed(ss) })
 	assert.True(t, expected)
 }
 
 func TestOnSessionClosedRecoversIfPanic(t *testing.T) {
-	ss := session.New(nil, true)
+	ss := session.New(nil)
 
 	expected := false
 	f := func() {
 		expected = true
 		panic("oh noes")
 	}
-	err := ss.OnClose(f)
-	assert.NoError(t, err)
+	ss.OnClose(f)
 
 	assert.NotPanics(t, func() { onSessionClosed(ss) })
 	assert.True(t, expected)

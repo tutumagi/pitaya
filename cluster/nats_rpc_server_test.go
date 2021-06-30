@@ -126,7 +126,7 @@ func TestNatsRPCServerOnSessionBind(t *testing.T) {
 	conn, err := setupNatsConn(fmt.Sprintf("nats://%s", s.Addr()), nil)
 	assert.NoError(t, err)
 	rpcServer.conn = conn
-	sess := session.New(nil, true, "uid123")
+	sess := session.New(nil, "uid123")
 	assert.Nil(t, sess.Subscriptions)
 	err = rpcServer.onSessionBind(context.Background(), sess)
 	assert.NoError(t, err)

@@ -55,7 +55,7 @@ func TestNewRemote(t *testing.T) {
 	// mockEncoder := codecmocks.NewMockPacketEncoder(ctrl)
 	// mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
 
-	remote, err := NewRemote(0, frontendID, uid, mockRPCClient, mockSerializer, mockSD)
+	remote, err := NewRemote(0, frontendID, uid, "", "", mockRPCClient, mockSerializer, mockSD)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	assert.Equal(t, mockSerializer, remote.serializer)
@@ -74,7 +74,7 @@ func TestNewRemote(t *testing.T) {
 // }
 
 func TestAgentRemoteClose(t *testing.T) {
-	remote, err := NewRemote(0, "", "", nil, nil, nil)
+	remote, err := NewRemote(0, "", "", "", "", nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	err = remote.Close()
@@ -82,7 +82,7 @@ func TestAgentRemoteClose(t *testing.T) {
 }
 
 func TestAgentRemoteRemoteAddr(t *testing.T) {
-	remote, err := NewRemote(0, "", "", nil, nil, nil)
+	remote, err := NewRemote(0, "", "", "", "", nil, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, remote)
 	addr := remote.RemoteAddr()
@@ -118,7 +118,7 @@ func TestAgentRemotePush(t *testing.T) {
 			// ss := &protos.Session{Uid: table.uid}
 			mockSerializer := serializemocks.NewMockSerializer(ctrl)
 			mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
-			remote, err := NewRemote(0, fSvID, table.uid, table.rpcClient, mockSerializer, mockSD)
+			remote, err := NewRemote(0, fSvID, table.uid, "", "", table.rpcClient, mockSerializer, mockSD)
 			assert.NoError(t, err)
 			assert.NotNil(t, remote)
 
@@ -159,7 +159,7 @@ func TestKickRemote(t *testing.T) {
 	mockSD := clustermocks.NewMockServiceDiscovery(ctrl)
 	mockSerializer := serializemocks.NewMockSerializer(ctrl)
 	frontID := uuid.New().String()
-	remote, err := NewRemote(0, frontID, uid, rpcClient, mockSerializer, mockSD)
+	remote, err := NewRemote(0, frontID, uid, "", "", rpcClient, mockSerializer, mockSD)
 	assert.NoError(t, err)
 
 	mockSD.EXPECT().GetServer(frontID)
@@ -272,7 +272,7 @@ func TestAgentRemoteSendRequest(t *testing.T) {
 			mockSerializer := serializemocks.NewMockSerializer(ctrl)
 			mockRPCClient := clustermocks.NewMockRPCClient(ctrl)
 			// mockMessageEncoder := messagemocks.NewMockEncoder(ctrl)
-			remote, err := NewRemote(0, "", "", mockRPCClient, mockSerializer, mockSD)
+			remote, err := NewRemote(0, "", "", "", "", mockRPCClient, mockSerializer, mockSD)
 			assert.NoError(t, err)
 			assert.NotNil(t, remote)
 

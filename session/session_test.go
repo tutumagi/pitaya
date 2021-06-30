@@ -31,13 +31,11 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	nats "github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/helpers"
-	"github.com/tutumagi/pitaya/protos"
 	"github.com/tutumagi/pitaya/session/mocks"
 )
 
@@ -88,9 +86,9 @@ func TestCloseAll(t *testing.T) {
 		"test_close_many_sessions": {
 			sessions: func() []*Session {
 				return []*Session{
-					New(entity, true, uuid.New().String()),
-					New(entity, true, uuid.New().String()),
-					New(entity, true, uuid.New().String()),
+					New(entity, uuid.New().String()),
+					New(entity, uuid.New().String()),
+					New(entity, uuid.New().String()),
 				}
 			},
 			mock: func() {
@@ -124,14 +122,11 @@ func TestCloseAll(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	tables := []struct {
-		name     string
-		frontend bool
-		uid      string
+		name string
+		uid  string
 	}{
-		{"test_frontend", true, ""},
-		{"test_backend", false, ""},
-		{"test_frontend_with_uid", true, uuid.New().String()},
-		{"test_backend_with_uid", false, uuid.New().String()},
+		{"test_frontend", ""},
+		{"test_frontend_with_uid", uuid.New().String()},
 	}
 
 	for _, table := range tables {
@@ -141,26 +136,23 @@ func TestNew(t *testing.T) {
 			entity := mocks.NewMockNetworkEntity(ctrl)
 			var ss *Session
 			if table.uid != "" {
-				ss = New(entity, table.frontend, table.uid)
+				ss = New(entity, table.uid)
 			} else {
-				ss = New(entity, table.frontend)
+				ss = New(entity)
 			}
 			assert.NotZero(t, ss.id)
 			assert.Equal(t, entity, ss.network)
 			// assert.Empty(t, ss.data)
 			assert.InDelta(t, time.Now().Unix(), ss.lastTime, 1)
 			assert.Empty(t, ss.OnCloseCallbacks)
-			assert.Equal(t, table.frontend, ss.IsFrontend)
 
 			if len(table.uid) > 0 {
 				assert.Equal(t, table.uid[0], ss.uid[0])
 			}
 
-			if table.frontend {
-				val, ok := sessionsByID.Load(ss.id)
-				assert.True(t, ok)
-				assert.Equal(t, val, ss)
-			}
+			val, ok := sessionsByID.Load(ss.id)
+			assert.True(t, ok)
+			assert.Equal(t, val, ss)
 		})
 	}
 }
@@ -168,7 +160,7 @@ func TestNew(t *testing.T) {
 func TestGetSessionByIDExists(t *testing.T) {
 	t.Parallel()
 
-	expectedSS := New(nil, true)
+	expectedSS := New(nil)
 	ss := GetSessionByID(expectedSS.id)
 	assert.Equal(t, expectedSS, ss)
 }
@@ -182,7 +174,7 @@ func TestGetSessionByIDDoenstExist(t *testing.T) {
 
 func TestGetSessionByUIDExists(t *testing.T) {
 	uid := uuid.New().String()
-	expectedSS := New(nil, true, uid)
+	expectedSS := New(nil, uid)
 	sessionsByUID.Store(uid, expectedSS)
 
 	ss := GetSessionByUID(uid)
@@ -200,7 +192,7 @@ func TestKick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	entity := mocks.NewMockNetworkEntity(ctrl)
-	ss := New(entity, true)
+	ss := New(entity)
 	c := context.Background()
 	entity.EXPECT().Kick(c)
 	entity.EXPECT().Close()
@@ -214,7 +206,7 @@ func TestSessionPush(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
-	ss := New(mockEntity, false)
+	ss := New(mockEntity)
 	route := uuid.New().String()
 	v := someStruct{A: 1, B: "aaa"}
 
@@ -229,7 +221,7 @@ func TestSessionResponseMID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
-	ss := New(mockEntity, false)
+	ss := New(mockEntity)
 	mid := uint(rand.Int())
 	v := someStruct{A: 1, B: "aaa"}
 	ctx := context.Background()
@@ -242,7 +234,7 @@ func TestSessionResponseMID(t *testing.T) {
 func TestSessionID(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, false)
+	ss := New(nil)
 	ss.id = int64(rand.Uint64())
 
 	id := ss.ID()
@@ -252,31 +244,17 @@ func TestSessionID(t *testing.T) {
 func TestSessionUID(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, false)
+	ss := New(nil)
 	ss.uid = uuid.New().String()
 
 	uid := ss.UID()
 	assert.Equal(t, ss.uid, uid)
 }
 
-func TestSessionSetFrontendData(t *testing.T) {
-	t.Parallel()
-
-	frontendID := uuid.New().String()
-	frontendSessionID := int64(rand.Uint64())
-
-	ss := New(nil, false)
-	assert.NotNil(t, ss)
-	ss.SetFrontendData(frontendID, frontendSessionID)
-
-	assert.Equal(t, frontendID, ss.frontendID)
-	assert.Equal(t, frontendSessionID, ss.frontendSessionID)
-}
-
 func TestSessionBindFailsWithoutUID(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, false)
+	ss := New(nil)
 	assert.NotNil(t, ss)
 
 	err := ss.Bind(nil, "")
@@ -286,7 +264,7 @@ func TestSessionBindFailsWithoutUID(t *testing.T) {
 func TestSessionBindFailsIfAlreadyBound(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, false)
+	ss := New(nil)
 	ss.uid = uuid.New().String()
 	assert.NotNil(t, ss)
 
@@ -312,7 +290,7 @@ func TestSessionBindRunsOnSessionBind(t *testing.T) {
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {
 			affectedVar = ""
-			ss := New(nil, true)
+			ss := New(nil)
 			assert.NotNil(t, ss)
 
 			OnSessionBind(table.onSessionBind)
@@ -335,7 +313,7 @@ func TestSessionBindRunsOnSessionBind(t *testing.T) {
 }
 
 func TestSessionBindFrontend(t *testing.T) {
-	ss := New(nil, true)
+	ss := New(nil)
 	assert.NotNil(t, ss)
 
 	uid := uuid.New().String()
@@ -348,69 +326,15 @@ func TestSessionBindFrontend(t *testing.T) {
 	assert.Equal(t, val, ss)
 }
 
-func TestSessionBindBackend(t *testing.T) {
-	tables := []struct {
-		name string
-		err  error
-	}{
-		{"successful_bind_in_front", nil},
-		{"failed_bind_in_front", errors.New("failed bind in front")},
-	}
-
-	for _, table := range tables {
-		t.Run(table.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockEntity := mocks.NewMockNetworkEntity(ctrl)
-			ss := New(mockEntity, false)
-			assert.NotNil(t, ss)
-
-			uid := uuid.New().String()
-			expectedSessionData := &protos.Session{
-				Id:  ss.frontendSessionID,
-				Uid: uid,
-			}
-			ctx := context.Background()
-			expectedRequestData, err := proto.Marshal(expectedSessionData)
-			assert.NoError(t, err)
-
-			mockEntity.EXPECT().SendRequest(ctx, "", "", ss.frontendID, constants.SessionBindRoute, expectedRequestData).Return(&protos.Response{}, table.err)
-
-			err = ss.Bind(ctx, uid)
-			assert.Equal(t, table.err, err)
-
-			if table.err == nil {
-				assert.Equal(t, uid, ss.uid)
-			} else {
-				assert.Empty(t, ss.uid)
-			}
-
-			_, ok := sessionsByUID.Load(uid)
-			assert.False(t, ok)
-		})
-	}
-}
-
-func TestSessionOnCloseFailsIfBackend(t *testing.T) {
-	t.Parallel()
-
-	ss := New(nil, false)
-	assert.NotNil(t, ss)
-
-	err := ss.OnClose(nil)
-	assert.Equal(t, constants.ErrOnCloseBackend, err)
-}
-
 func TestSessionOnClose(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, true)
+	ss := New(nil)
 	assert.NotNil(t, ss)
 
 	expected := false
 	f := func() { expected = true }
-	err := ss.OnClose(f)
-	assert.NoError(t, err)
+	ss.OnClose(f)
 	assert.Len(t, ss.OnCloseCallbacks, 1)
 
 	ss.OnCloseCallbacks[0]()
@@ -431,7 +355,7 @@ func TestSessionClose(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockEntity := mocks.NewMockNetworkEntity(ctrl)
-			ss := New(mockEntity, true)
+			ss := New(mockEntity)
 			assert.NotNil(t, ss)
 
 			if table.uid != "" {
@@ -456,27 +380,29 @@ func TestSessionClose(t *testing.T) {
 func TestSessionCloseFrontendWithSubscription(t *testing.T) {
 	s := helpers.GetTestNatsServer(t)
 	defer s.Shutdown()
+	var initialSubs uint32 = s.NumSubscriptions()
 	conn, err := nats.Connect(fmt.Sprintf("nats://%s", s.Addr()))
 	assert.NoError(t, err)
 	defer conn.Close()
 
 	subs, err := conn.Subscribe(uuid.New().String(), func(msg *nats.Msg) {})
 	assert.NoError(t, err)
-
-	helpers.ShouldEventuallyReturn(t, s.NumSubscriptions, uint32(1))
+	helpers.ShouldEventuallyReturn(t, s.NumSubscriptions, uint32(initialSubs+1))
+	helpers.ShouldEventuallyReturn(t, conn.NumSubscriptions, int(1))
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
-	ss := New(mockEntity, true)
+	ss := New(mockEntity)
 	assert.NotNil(t, ss)
 	ss.Subscriptions = []*nats.Subscription{subs}
 
 	mockEntity.EXPECT().Close()
 	ss.Close()
 
-	helpers.ShouldEventuallyReturn(t, s.NumSubscriptions, uint32(0))
+	helpers.ShouldEventuallyReturn(t, s.NumSubscriptions, uint32(initialSubs))
+	helpers.ShouldEventuallyReturn(t, conn.NumSubscriptions, int(0))
 }
 
 func TestSessionRemoteAddr(t *testing.T) {
@@ -486,7 +412,7 @@ func TestSessionRemoteAddr(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
-	ss := New(mockEntity, true)
+	ss := New(mockEntity)
 	assert.NotNil(t, ss)
 
 	expectedAddr := &mockAddr{}
@@ -559,16 +485,11 @@ func TestOnSessionBind(t *testing.T) {
 func TestSessionClear(t *testing.T) {
 	t.Parallel()
 
-	ss := New(nil, true)
+	ss := New(nil)
 	assert.NotNil(t, ss)
 
 	ss.uid = uuid.New().String()
-	// assert.NotEmpty(t, ss.encodedData)
-
 	ss.Clear()
-
-	// expectedEncoded := getEncodedEmptyMap()
-	// assert.Equal(t, expectedEncoded, ss.encodedData)
 }
 
 func TestSessionGetHandshakeData(t *testing.T) {
@@ -605,7 +526,7 @@ func TestSessionGetHandshakeData(t *testing.T) {
 
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {
-			ss := New(nil, false)
+			ss := New(nil)
 
 			assert.Nil(t, ss.GetHandshakeData())
 
@@ -650,7 +571,7 @@ func TestSessionSetHandshakeData(t *testing.T) {
 
 	for _, table := range tables {
 		t.Run(table.name, func(t *testing.T) {
-			ss := New(nil, false)
+			ss := New(nil)
 			ss.SetHandshakeData(table.data)
 			assert.Equal(t, table.data, ss.handshakeData)
 		})

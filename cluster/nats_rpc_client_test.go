@@ -295,7 +295,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
 
 	rt := route.NewRoute("sv", "svc", "method")
-	ss := session.New(nil, true, "uid")
+	ss := session.New(nil, "uid")
 	data := []byte("data")
 	id := uint(123)
 	tables := []struct {
@@ -408,7 +408,7 @@ func TestNatsRPCClientCall(t *testing.T) {
 	rpcClient.Init()
 
 	rt := route.NewRoute("sv", "svc", "method")
-	ss := session.New(nil, true, "uid")
+	ss := session.New(nil, "uid")
 
 	msg := &message.Message{
 		Type: message.Request,

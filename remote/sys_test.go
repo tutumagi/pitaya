@@ -35,7 +35,7 @@ import (
 func TestBindSession(t *testing.T) {
 	t.Parallel()
 	s := &Sys{}
-	ss := session.New(nil, true)
+	ss := session.New(nil)
 	uid := uuid.New().String()
 
 	data := &protos.Session{
@@ -64,7 +64,7 @@ func TestBindSessionShouldErrorIfNotExists(t *testing.T) {
 func TestBindSessionShouldErrorIfAlreadyBound(t *testing.T) {
 	t.Parallel()
 	s := &Sys{}
-	ss := session.New(nil, true)
+	ss := session.New(nil)
 	uid := uuid.New().String()
 	data := &protos.Session{
 		Id:  ss.ID(),
@@ -123,7 +123,7 @@ func TestKick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockEntity := mocks.NewMockNetworkEntity(ctrl)
-	ss := session.New(mockEntity, true)
+	ss := session.New(mockEntity)
 	uid := uuid.New().String()
 
 	data := &protos.Session{

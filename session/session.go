@@ -30,7 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	nats "github.com/nats-io/nats.go"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
@@ -87,16 +86,11 @@ type Session struct {
 	ownerEntityID   string
 	ownerEntityType string
 
-	lastTime int64         // last heartbeat time
-	network  NetworkEntity // low-level network entity
-	// data              map[string]interface{} // session data store
-	handshakeData *HandshakeData // handshake data received by the client
-	// encodedData       []byte               // session data encoded as a byte array
-	OnCloseCallbacks  []func()             //onClose callbacks
-	IsFrontend        bool                 // if session is a frontend session
-	frontendID        string               // the id of the frontend that owns the session
-	frontendSessionID int64                // the id of the session on the frontend server
-	Subscriptions     []*nats.Subscription // subscription created on bind when using nats rpc server
+	lastTime         int64                // last heartbeat time
+	network          NetworkEntity        // low-level network entity
+	handshakeData    *HandshakeData       // handshake data received by the client
+	OnCloseCallbacks []func()             //onClose callbacks
+	Subscriptions    []*nats.Subscription // subscription created on bind when using nats rpc server
 }
 
 type sessionIDService struct {
@@ -116,7 +110,7 @@ func (c *sessionIDService) sessionID() int64 {
 
 // New returns a new session instance
 // a NetworkEntity is a low-level network instance
-func New(entity NetworkEntity, frontend bool, UID ...string) *Session {
+func New(entity NetworkEntity, UID ...string) *Session {
 	s := &Session{
 		id:      sessionIDSvc.sessionID(),
 		network: entity,
@@ -124,12 +118,11 @@ func New(entity NetworkEntity, frontend bool, UID ...string) *Session {
 		handshakeData:    nil,
 		lastTime:         time.Now().Unix(),
 		OnCloseCallbacks: []func(){},
-		IsFrontend:       frontend,
 	}
-	if frontend {
-		sessionsByID.Store(s.id, s)
-		atomic.AddInt64(&SessionCount, 1)
-	}
+
+	sessionsByID.Store(s.id, s)
+	atomic.AddInt64(&SessionCount, 1)
+
 	if len(UID) > 0 {
 		s.uid = UID[0]
 	}
@@ -270,12 +263,6 @@ func (s *Session) SwitchOwner(id string, typ string) {
 	logger.Infof("session switch owner new id:%s typ:%s", id, typ)
 }
 
-// SetFrontendData sets frontend id and session id
-func (s *Session) SetFrontendData(frontendID string, frontendSessionID int64) {
-	s.frontendID = frontendID
-	s.frontendSessionID = frontendSessionID
-}
-
 // Bind bind UID to current session
 func (s *Session) Bind(ctx context.Context, uid string) error {
 	if uid == "" {
@@ -304,18 +291,8 @@ func (s *Session) Bind(ctx context.Context, uid string) error {
 	}
 
 	// if code running on frontend server
-	if s.IsFrontend {
-		sessionsByUID.Store(uid, s)
-	} else {
-		// If frontentID is set this means it is a remote call and the current server
-		// is not the frontend server that received the user request
-		err := s.bindInFront(ctx)
-		if err != nil {
-			logger.Log.Error("error while trying to push session to front: ", err)
-			s.uid = ""
-			return err
-		}
-	}
+	sessionsByUID.Store(uid, s)
+
 	return nil
 }
 
@@ -330,12 +307,8 @@ func (s *Session) Kick(ctx context.Context) error {
 
 // OnClose adds the function it receives to the callbacks that will be called
 // when the session is closed
-func (s *Session) OnClose(c func()) error {
-	if !s.IsFrontend {
-		return constants.ErrOnCloseBackend
-	}
+func (s *Session) OnClose(c func()) {
 	s.OnCloseCallbacks = append(s.OnCloseCallbacks, c)
-	return nil
 }
 
 // Close terminates current session, session related data will not be released,
@@ -345,7 +318,7 @@ func (s *Session) Close() {
 	sessionsByID.Delete(s.ID())
 	sessionsByUID.Delete(s.UID())
 	// TODO: this logic should be moved to nats rpc server
-	if s.IsFrontend && s.Subscriptions != nil && len(s.Subscriptions) > 0 {
+	if s.Subscriptions != nil && len(s.Subscriptions) > 0 {
 		// if the user is bound to an userid and nats rpc server is being used we need to unsubscribe
 		for _, sub := range s.Subscriptions {
 			err := sub.Unsubscribe()
@@ -362,10 +335,6 @@ func (s *Session) Close() {
 // RemoteAddr returns the remote network address.
 func (s *Session) RemoteAddr() net.Addr {
 	return s.network.RemoteAddr()
-}
-
-func (s *Session) bindInFront(ctx context.Context) error {
-	return s.sendRequestToFront(ctx, constants.SessionBindRoute, false)
 }
 
 // Clear releases all data related to current session
@@ -387,27 +356,6 @@ func (s *Session) SetHandshakeData(data *HandshakeData) {
 // GetHandshakeData gets the handshake data received by the client.
 func (s *Session) GetHandshakeData() *HandshakeData {
 	return s.handshakeData
-}
-
-func (s *Session) sendRequestToFront(ctx context.Context, route string, includeData bool) error {
-	sessionData := &protos.Session{
-		Id:  s.frontendSessionID,
-		Uid: s.uid,
-	}
-	if includeData {
-		// sessionData.Data = s.encodedData
-	}
-	b, err := proto.Marshal(sessionData)
-	if err != nil {
-		return err
-	}
-	// TODO 这里没有entityID和entityType
-	res, err := s.network.SendRequest(ctx, "", "", s.frontendID, route, b)
-	if err != nil {
-		return err
-	}
-	logger.Log.Debugf("%s Got response: %+v", route, res)
-	return nil
 }
 
 func (s *Session) DebugString() string {
