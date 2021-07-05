@@ -79,12 +79,15 @@ type HandshakeData struct {
 // Session instance related to the client will be passed to Handler method in the
 // context parameter.
 type Session struct {
-	sync.RWMutex        // protect data
-	id           int64  // session global unique id
-	uid          string // binding user id
+	sync.RWMutex       // protect data
+	id           int64 // session global unique id
+
+	uid string // binding user id
 	// 和哪个 EntityID 绑定在一起
 	ownerEntityID   string
 	ownerEntityType string
+	// 绑定的实体在哪个后端server上面
+	backgroundServerID string
 
 	lastTime         int64                // last heartbeat time
 	network          NetworkEntity        // low-level network entity
@@ -242,15 +245,20 @@ func (s *Session) OwnerEntityType() string {
 	return s.ownerEntityType
 }
 
+func (s *Session) BackgroundServerID() string {
+	return s.backgroundServerID
+}
+
 func (s *Session) Owner() (ownerID string, ownerType string) {
 	return s.ownerEntityID, s.ownerEntityType
 }
 
-func (s *Session) SwitchOwner(id string, typ string) {
-	logger.Infof("session switch owner old id:%s typ:%s", s.ownerEntityID, s.ownerEntityType)
+func (s *Session) SwitchOwner(id string, typ string, backgroundServerID string) {
+	logger.Infof("session switch owner old id:%s typ:%s svrid:%s", s.ownerEntityID, s.ownerEntityType, s.backgroundServerID)
 	s.ownerEntityID = id
 	s.ownerEntityType = typ
-	logger.Infof("session switch owner new id:%s typ:%s", id, typ)
+	s.backgroundServerID = backgroundServerID
+	logger.Infof("session switch owner new id:%s typ:%s svrid:%s", id, typ, backgroundServerID)
 }
 
 // Bind bind UID to current session

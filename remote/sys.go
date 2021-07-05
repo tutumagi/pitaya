@@ -75,7 +75,7 @@ func (s *Sys) SwitchSessionOwner(ctx context.Context, msg *protos.SwitchOwner) (
 	if sess == nil {
 		return nil, constants.ErrSessionNotFound
 	}
-	sess.SwitchOwner(msg.Id, msg.Type)
+	sess.SwitchOwner(msg.Id, msg.Type, msg.BackgroundServerID)
 
 	return &protos.Response{}, nil
 }

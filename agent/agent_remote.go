@@ -227,7 +227,7 @@ func (a *Remote) Bind(ctx context.Context, uid string) error {
 }
 
 // SendRequest sends a request to a server
-func (a *Remote) SwitchOwner(ctx context.Context, ownerID string, ownerType string) error {
+func (a *Remote) SwitchOwner(ctx context.Context, ownerID string, ownerType string, curServerID string) error {
 	if a.ownerID == ownerID && a.ownerType == ownerType {
 		return nil
 	}
@@ -238,8 +238,9 @@ func (a *Remote) SwitchOwner(ctx context.Context, ownerID string, ownerType stri
 			Uid:      a.uid,
 			ServerID: a.frontendID,
 		},
-		Id:   ownerID,
-		Type: ownerType,
+		Id:                 ownerID,
+		Type:               ownerType,
+		BackgroundServerID: curServerID,
 	}
 
 	logger.Log.Debugf("SwitchOwner (%s) ", msg.String())

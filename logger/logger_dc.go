@@ -62,8 +62,8 @@ func Errorf(format string, args ...interface{}) {
 // Panicf logger, log message then Panic
 func Panicf(format string, args ...interface{}) {
 	if l == nil {
-		debug.PrintStack()
 		fmt.Printf(fmt.Sprintf("%s\n", format), args...)
+		debug.PrintStack()
 		return
 	}
 	l.sugar.Panicf(format, args...)
