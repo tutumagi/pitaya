@@ -257,11 +257,11 @@ func (ns *NatsRPCServer) marshalResponse(res *protos.Response) ([]byte, error) {
 	return p, err
 }
 
-func (ns *NatsRPCServer) processMessages(threadID int) {
-	for req := range ns.GetUnhandledRequestsChannel() {
-		ns.ProcessSingleMessage(req)
-	}
-}
+// func (ns *NatsRPCServer) processMessages(threadID int) {
+// 	for req := range ns.GetUnhandledRequestsChannel() {
+// 		ns.ProcessSingleMessage(req)
+// 	}
+// }
 
 // ProcessSingleMessage 处理单个 rpc 到的消息
 func (ns *NatsRPCServer) ProcessSingleMessage(req *protos.Request) {
@@ -350,9 +350,9 @@ func (ns *NatsRPCServer) Init() error {
 	}
 	// this handles remote messages
 	// 处理 RPC 消息
-	for i := 0; i < ns.config.GetInt("pitaya.concurrency.remote.service"); i++ {
-		go ns.processMessages(i)
-	}
+	// for i := 0; i < ns.config.GetInt("pitaya.concurrency.remote.service"); i++ {
+	// 	go ns.processMessages(i)
+	// }
 
 	session.OnSessionBind(ns.onSessionBind)
 
