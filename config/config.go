@@ -153,6 +153,11 @@ func (c *Config) GetStringSlice(s string) []string {
 	return c.config.GetStringSlice(s)
 }
 
+// GetIntSlice returns a int slice from the inner config
+func (c *Config) GetIntSlice(s string) []int {
+	return c.config.GetIntSlice(s)
+}
+
 // Get returns an interface from the inner config
 func (c *Config) Get(s string) interface{} {
 	return c.config.Get(s)
