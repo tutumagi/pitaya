@@ -22,12 +22,12 @@ package docgenerator
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
 
 	"github.com/tutumagi/pitaya/component"
-	"github.com/tutumagi/pitaya/route"
 )
 
 type docs struct {
@@ -50,8 +50,9 @@ func HandlersDocs(serverType string, services map[string]*component.Service, get
 
 	for serviceName, service := range services {
 		for name, handler := range service.Handlers {
-			routeName := route.NewRoute(serverType, serviceName, name)
-			docs.Handlers[routeName.String()] = docForMethod(handler.Method, getPtrNames)
+			// routeName := route.NewRoute(serverType, serviceName, name)
+			routeName := fmt.Sprintf("%s.%s.%s", serverType, serviceName, name)
+			docs.Handlers[routeName] = docForMethod(handler.Method, getPtrNames)
 		}
 	}
 
@@ -66,8 +67,9 @@ func RemotesDocs(serverType string, services map[string]*component.Service, getP
 
 	for serviceName, service := range services {
 		for name, remote := range service.Remotes {
-			routeName := route.NewRoute(serverType, serviceName, name)
-			docs.Remotes[routeName.String()] = docForMethod(remote.Method, getPtrNames)
+			// routeName := route.NewRoute(serverType, serviceName, name)
+			routeName := fmt.Sprintf("%s.%s.%s", serverType, serviceName, name)
+			docs.Remotes[routeName] = docForMethod(remote.Method, getPtrNames)
 		}
 	}
 

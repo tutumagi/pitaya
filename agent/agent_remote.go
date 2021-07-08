@@ -30,7 +30,6 @@ import (
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/serialize"
 	"github.com/tutumagi/pitaya/util"
 )
@@ -181,10 +180,10 @@ func (a *Remote) sendPush(m pendingMessage, userID string, sv *cluster.Server) (
 
 // SendRequest sends a request to a server
 func (a *Remote) SendRequest(ctx context.Context, entityID, entityType, serverID, reqRoute string, v interface{}) (*protos.Response, error) {
-	r, err := route.Decode(reqRoute)
-	if err != nil {
-		return nil, err
-	}
+	// _, err := route.Decode(reqRoute)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	payload, err := util.SerializeOrRaw(a.serializer, v)
 	if err != nil {
 		return nil, err
@@ -199,7 +198,7 @@ func (a *Remote) SendRequest(ctx context.Context, entityID, entityType, serverID
 	if err != nil {
 		return nil, err
 	}
-	return a.rpcClient.Call(ctx, protos.RPCType_User, r, nil, msg, server)
+	return a.rpcClient.Call(ctx, protos.RPCType_User, reqRoute, nil, msg, server)
 }
 
 // SendRequest sends a request to a server

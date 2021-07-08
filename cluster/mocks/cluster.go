@@ -10,7 +10,6 @@ import (
 	cluster "github.com/tutumagi/pitaya/cluster"
 	message "github.com/tutumagi/pitaya/conn/message"
 	protos "github.com/tutumagi/pitaya/protos"
-	route "github.com/tutumagi/pitaya/route"
 	session "github.com/tutumagi/pitaya/session"
 	reflect "reflect"
 )
@@ -164,7 +163,7 @@ func (mr *MockRPCClientMockRecorder) BroadcastSessionBind(arg0 interface{}) *gom
 }
 
 // Call mocks base method
-func (m *MockRPCClient) Call(arg0 context.Context, arg1 protos.RPCType, arg2 *route.Route, arg3 *session.Session, arg4 *message.Message, arg5 *cluster.Server) (*protos.Response, error) {
+func (m *MockRPCClient) Call(arg0 context.Context, arg1 protos.RPCType, arg2 string, arg3 *session.Session, arg4 *message.Message, arg5 *cluster.Server) (*protos.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(*protos.Response)
@@ -193,7 +192,7 @@ func (mr *MockRPCClientMockRecorder) Init() *gomock.Call {
 }
 
 // Post mocks base method
-func (m *MockRPCClient) Post(arg0 context.Context, arg1 protos.RPCType, arg2 *route.Route, arg3 *session.Session, arg4 *message.Message, arg5 *cluster.Server) error {
+func (m *MockRPCClient) Post(arg0 context.Context, arg1 protos.RPCType, arg2 string, arg3 *session.Session, arg4 *message.Message, arg5 *cluster.Server) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Post", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(error)

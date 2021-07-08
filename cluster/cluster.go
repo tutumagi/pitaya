@@ -29,7 +29,6 @@ import (
 	"github.com/tutumagi/pitaya/interfaces"
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/tracing"
 )
@@ -51,9 +50,9 @@ type RPCClient interface {
 	SendPush(userID string, frontendSv *Server, push *protos.Push) error
 	SendKick(userID string, serverType string, kick *protos.KickMsg) error
 	BroadcastSessionBind(uid string) error
-	Call(ctx context.Context, rpcType protos.RPCType, route *route.Route, session *session.Session, msg *message.Message, server *Server) (*protos.Response, error)
+	Call(ctx context.Context, rpcType protos.RPCType, routeStr string, session *session.Session, msg *message.Message, server *Server) (*protos.Response, error)
 	// Post async calls a method remotelly
-	Post(ctx context.Context, rpcType protos.RPCType, route *route.Route, session *session.Session, msg *message.Message, server *Server) error
+	Post(ctx context.Context, rpcType protos.RPCType, routeStr string, session *session.Session, msg *message.Message, server *Server) error
 	interfaces.Module
 }
 
@@ -87,7 +86,7 @@ const (
 func buildRequest(
 	ctx context.Context,
 	rpcType protos.RPCType,
-	route *route.Route,
+	routeStr string,
 	session *session.Session,
 	msg *message.Message,
 	thisServer *Server,
@@ -97,7 +96,7 @@ func buildRequest(
 		Msg: &protos.MsgV2{
 			Eid:   msg.EntityID,
 			Typ:   msg.EntityType,
-			Route: route.String(),
+			Route: routeStr,
 			Data:  msg.Data,
 		},
 	}

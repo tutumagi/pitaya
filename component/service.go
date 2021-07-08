@@ -58,6 +58,7 @@ type (
 		Handlers map[string]*Handler // registered methods
 		Remotes  map[string]*Remote  // registered remote methods
 		Options  options             // options
+		IsDefault bool 				// 是否是默认的模块，默认为false，默认模块可以直接用 method 调用，非默认模块得用 Name.MethodName 调用
 	}
 )
 
@@ -73,6 +74,7 @@ func NewService(comp Component, opts []Option) *Service {
 		opt := opts[i]
 		opt(&s.Options)
 	}
+	s.IsDefault = s.Options.isDefault
 	if name := s.Options.name; name != "" {
 		s.Name = name
 	} else {

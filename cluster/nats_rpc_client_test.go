@@ -40,7 +40,6 @@ import (
 	"github.com/tutumagi/pitaya/metrics"
 	metricsmocks "github.com/tutumagi/pitaya/metrics/mocks"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/session"
 )
 
@@ -294,7 +293,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 	sv := getServer()
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
 
-	rt := route.NewRoute("sv", "svc", "method")
+	rt := "svc.method"
 	ss := session.New(nil, "uid")
 	data := []byte("data")
 	id := uint(123)
@@ -302,7 +301,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 		name           string
 		frontendServer bool
 		rpcType        protos.RPCType
-		route          *route.Route
+		route          string
 		session        *session.Session
 		msg            *message.Message
 		expected       *protos.Request
@@ -313,7 +312,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&protos.Request{
 				Type: protos.RPCType_Sys,
 				Msg: &protos.MsgV2{
-					Route: rt.String(),
+					Route: rt,
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
 					Id:    uint64(id),
@@ -331,7 +330,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&protos.Request{
 				Type: protos.RPCType_Sys,
 				Msg: &protos.MsgV2{
-					Route: rt.String(),
+					Route: rt,
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
 					Id:    uint64(id),
@@ -349,7 +348,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&protos.Request{
 				Type: protos.RPCType_User,
 				Msg: &protos.MsgV2{
-					Route: rt.String(),
+					Route: rt,
 					Data:  data,
 					Type:  protos.MsgType_MsgRequest,
 				},
@@ -362,7 +361,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 			&protos.Request{
 				Type: protos.RPCType_Sys,
 				Msg: &protos.MsgV2{
-					Route: rt.String(),
+					Route: rt,
 					Data:  data,
 					Type:  protos.MsgType_MsgNotify,
 					Id:    0,
@@ -392,7 +391,7 @@ func TestNatsRPCClientCallShouldFailIfNotRunning(t *testing.T) {
 	config := getConfig()
 	sv := getServer()
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
-	res, err := rpcClient.Call(context.Background(), protos.RPCType_Sys, nil, nil, nil, sv)
+	res, err := rpcClient.Call(context.Background(), protos.RPCType_Sys, "", nil, nil, sv)
 	assert.Equal(t, constants.ErrRPCClientNotInitialized, err)
 	assert.Nil(t, res)
 }
@@ -408,7 +407,7 @@ func TestNatsRPCClientCall(t *testing.T) {
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
 	rpcClient.Init()
 
-	rt := route.NewRoute("sv", "svc", "method")
+	rt := "svc.method"
 	ss := session.New(nil, "uid")
 
 	msg := &message.Message{

@@ -34,7 +34,6 @@ import (
 	"github.com/tutumagi/pitaya/conn/message"
 	"github.com/tutumagi/pitaya/constants"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	serializemocks "github.com/tutumagi/pitaya/serialize/mocks"
 )
 
@@ -164,8 +163,8 @@ func TestKickRemote(t *testing.T) {
 
 	mockSD.EXPECT().GetServer(frontID)
 	c := context.Background()
-	r, _ := route.Decode("sys.kick")
-	rpcClient.EXPECT().Call(c, protos.RPCType_User, r, gomock.Nil(), gomock.Any(), gomock.Nil())
+	// r, _ := route.Decode("sys.kick")
+	rpcClient.EXPECT().Call(c, protos.RPCType_User, "sys.kick", gomock.Nil(), gomock.Any(), gomock.Nil())
 	err = remote.Kick(c)
 
 	assert.NoError(t, err)
@@ -291,12 +290,12 @@ func TestAgentRemoteSendRequest(t *testing.T) {
 					mockSD.EXPECT().GetServer(table.serverID).Return(expectedServer, table.errGetServer)
 
 					if table.errGetServer == nil {
-						r, _ := route.Decode(table.reqRoute)
+						// r, _ := route.Decode(table.reqRoute)
 						expectedMsg := &message.Message{
 							Route: table.reqRoute,
 							Data:  serializeRet,
 						}
-						mockRPCClient.EXPECT().Call(nil, protos.RPCType_User, r, nil, expectedMsg, expectedServer).Return(table.resp, table.err)
+						mockRPCClient.EXPECT().Call(nil, protos.RPCType_User, table.reqRoute, nil, expectedMsg, expectedServer).Return(table.resp, table.err)
 					}
 				}
 			}

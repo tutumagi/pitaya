@@ -23,6 +23,7 @@ package message
 import (
 	"encoding/binary"
 
+	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/util/compression"
 )
 
@@ -72,6 +73,8 @@ func (me *MessagesEncoder) Encode(message *Message) ([]byte, error) {
 	code, compressed := routes[message.Route]
 	if compressed {
 		flag |= msgRouteCompressMask
+	} else if message.Type == Push {
+		logger.Warnf("compress route cannot find. %s", message.Route)
 	}
 
 	if message.Err {

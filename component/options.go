@@ -22,8 +22,9 @@ package component
 
 type (
 	options struct {
-		name     string              // component name
-		nameFunc func(string) string // rename handler name
+		name      string              // component name
+		nameFunc  func(string) string // rename handler name
+		isDefault bool                // 是否是默认的component
 	}
 
 	// Option used to customize handler
@@ -42,5 +43,11 @@ func WithName(name string) Option {
 func WithNameFunc(fn func(string) string) Option {
 	return func(opt *options) {
 		opt.nameFunc = fn
+	}
+}
+
+func WithDefault(isDefault bool) Option {
+	return func(opt *options) {
+		opt.isDefault = isDefault
 	}
 }

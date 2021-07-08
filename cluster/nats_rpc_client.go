@@ -36,7 +36,6 @@ import (
 	"github.com/tutumagi/pitaya/logger"
 	"github.com/tutumagi/pitaya/metrics"
 	"github.com/tutumagi/pitaya/protos"
-	"github.com/tutumagi/pitaya/route"
 	"github.com/tutumagi/pitaya/session"
 	"github.com/tutumagi/pitaya/tracing"
 )
@@ -135,7 +134,7 @@ func (ns *NatsRPCClient) SendKick(userID string, serverType string, kick *protos
 func (ns *NatsRPCClient) Call(
 	ctx context.Context,
 	rpcType protos.RPCType,
-	route *route.Route,
+	routeStr string,
 	session *session.Session,
 	msg *message.Message,
 	server *Server,
@@ -157,7 +156,7 @@ func (ns *NatsRPCClient) Call(
 		err = constants.ErrRPCClientNotInitialized
 		return nil, err
 	}
-	req, err := buildRequest(ctx, rpcType, route, session, msg, ns.server)
+	req, err := buildRequest(ctx, rpcType, routeStr, session, msg, ns.server)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +170,7 @@ func (ns *NatsRPCClient) Call(
 	if ns.metricsReporters != nil {
 		startTime := time.Now()
 		ctx = pcontext.AddToPropagateCtx(ctx, constants.StartTimeKey, startTime.UnixNano())
-		ctx = pcontext.AddToPropagateCtx(ctx, constants.RouteKey, route.String())
+		ctx = pcontext.AddToPropagateCtx(ctx, constants.RouteKey, routeStr)
 		defer func() {
 			typ := "rpc"
 			metrics.ReportTimingFromCtx(ctx, ns.metricsReporters, typ, err)
@@ -206,7 +205,7 @@ func (ns *NatsRPCClient) Call(
 func (ns *NatsRPCClient) Post(
 	ctx context.Context,
 	rpcType protos.RPCType,
-	route *route.Route,
+	routeStr string,
 	session *session.Session,
 	msg *message.Message,
 	server *Server,
@@ -229,7 +228,7 @@ func (ns *NatsRPCClient) Post(
 		err = constants.ErrRPCClientNotInitialized
 		return err
 	}
-	req, err := buildRequest(ctx, rpcType, route, session, msg, ns.server)
+	req, err := buildRequest(ctx, rpcType, routeStr, session, msg, ns.server)
 	if err != nil {
 		return err
 	}
@@ -241,7 +240,7 @@ func (ns *NatsRPCClient) Post(
 	if ns.metricsReporters != nil {
 		startTime := time.Now()
 		ctx = pcontext.AddToPropagateCtx(ctx, constants.StartTimeKey, startTime.UnixNano())
-		ctx = pcontext.AddToPropagateCtx(ctx, constants.RouteKey, route.String())
+		ctx = pcontext.AddToPropagateCtx(ctx, constants.RouteKey, routeStr)
 		defer func() {
 			typ := "rpc send"
 			metrics.ReportTimingFromCtx(ctx, ns.metricsReporters, typ, err)
